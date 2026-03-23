@@ -1,0 +1,47 @@
+// Global styles for Zenypst
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+// Smooth scrollbars
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+// CodeMirror adjustments
+.cm-editor {
+  outline: none !important;
+}
+
+.cm-focused {
+  outline: none !important;
+}
+
+// Splitpanes
+.splitpanes.default-theme .splitpanes__pane {
+  background: transparent;
+}
+
+// Prevent text selection during drag
+.splitpanes__splitter {
+  user-select: none;
+}
