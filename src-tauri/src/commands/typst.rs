@@ -26,24 +26,6 @@ fn find_typst() -> String {
     "typst".to_string()
 }
 
-/// find_typst() を使った Command を返す（PATH を拡張して渡す）。
-fn typst_command() -> Command {
-    let typst_bin = find_typst();
-    let mut cmd = Command::new(&typst_bin);
-
-    // 現在の PATH に共通インストール先を追記して渡す
-    let current_path = std::env::var("PATH").unwrap_or_default();
-    let extra = if let Some(home) = dirs::home_dir() {
-        format!(
-            "{}/.cargo/bin:{}/.local/bin:/usr/local/bin:{}",
-            home.display(), home.display(), current_path
-        )
-    } else {
-        format!("/usr/local/bin:{}", current_path)
-    };
-    cmd.env("PATH", extra);
-    cmd
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CompileError {
