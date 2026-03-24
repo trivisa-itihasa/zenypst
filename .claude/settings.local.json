@@ -13,7 +13,15 @@
       "Bash(sudo dd:*)",
       "Bash(tar -xzf /tmp/gh.tar.gz -C /tmp)",
       "Bash(cp /tmp/gh_2.67.0_linux_amd64/bin/gh /home/gecko/.local/bin/gh)",
-      "Bash(gh --version)"
+      "Bash(gh --version)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git rm:*)",
+      "Bash(source /home/gecko/.zshrc_local)",
+      "Bash(file /home/gecko/project/zenypst/src-tauri/icons/*.ico)",
+      "Bash(file /home/gecko/project/zenypst/src-tauri/icons/*.png)",
+      "Bash(convert --version)"
     ]
   }
 }

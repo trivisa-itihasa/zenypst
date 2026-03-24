@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, onUnmounted } from "vue";
 import { usePreviewStore } from "@/stores/preview";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { readFile } from "@tauri-apps/plugin-fs";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import CompileStatus from "./CompileStatus.vue";
 
 const previewStore = usePreviewStore();
@@ -10,81 +11,91 @@ const isLoading = ref(false);
 const scale = ref(1.5);
 
 let pdfjsLib: typeof import("pdfjs-dist") | null = null;
+let currentBlobUrl: string | null = null;
+let cachedPdf: PDFDocumentProxy | null = null;
 
 async function loadPdfjs(): Promise<void> {
   if (pdfjsLib) return;
   const pdfjs = await import("pdfjs-dist");
-  // Configure worker
-  const workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.mjs",
-    import.meta.url
-  ).toString();
+  const workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
   pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
   pdfjsLib = pdfjs;
 }
 
-async function renderPdf(filePath: string): Promise<void> {
-  if (!pdfContainer.value || !filePath) return;
-
+/** Re-draw all pages using cachedPdf and current scale. */
+async function renderPages(): Promise<void> {
+  if (!pdfContainer.value || !cachedPdf) return;
   isLoading.value = true;
   try {
-    await loadPdfjs();
-    if (!pdfjsLib) return;
-
-    // Convert the file path to a tauri asset URL
-    const url = convertFileSrc(filePath) + `?rev=${previewStore.pdfRevision}`;
-
-    const loadingTask = pdfjsLib.getDocument(url);
-    const pdf = await loadingTask.promise;
-
-    // Clear previous pages
     pdfContainer.value.innerHTML = "";
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
+    for (let pageNum = 1; pageNum <= cachedPdf.numPages; pageNum++) {
+      const page = await cachedPdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: scale.value });
-
       const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       canvas.style.display = "block";
       canvas.style.margin = "8px auto";
       canvas.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
-
       const ctx = canvas.getContext("2d");
       if (!ctx) continue;
-
       await page.render({ canvasContext: ctx, viewport }).promise;
       pdfContainer.value.appendChild(canvas);
     }
   } catch (err) {
-    console.error("Failed to render PDF:", err);
+    console.error("Failed to render pages:", err);
   } finally {
     isLoading.value = false;
   }
 }
 
-// Re-render when a new PDF is available
-watch(
-  () => previewStore.pdfRevision,
-  async () => {
-    const path = previewStore.lastSuccessfulPdfPath;
-    if (path) {
-      await renderPdf(path);
-    }
-  }
-);
+/** Load a new PDF file from disk, then render. */
+async function loadPdf(filePath: string): Promise<void> {
+  if (!filePath) return;
+  await loadPdfjs();
+  if (!pdfjsLib) return;
+
+  const bytes = await readFile(filePath);
+  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+  currentBlobUrl = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+
+  cachedPdf = await pdfjsLib.getDocument(currentBlobUrl).promise;
+  await renderPages();
+}
+
+// New PDF compiled → reload file and re-render
+watch(() => previewStore.pdfRevision, async () => {
+  const path = previewStore.lastSuccessfulPdfPath;
+  if (path) await loadPdf(path);
+});
+
+// Scale changed → re-draw with cached PDF (no disk I/O)
+watch(scale, async () => {
+  await renderPages();
+});
+
+// Ctrl+wheel zoom on the PDF container
+function onWheel(e: WheelEvent): void {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.1 : 0.1;
+  scale.value = Math.min(4, Math.max(0.5, Math.round((scale.value + delta) * 10) / 10));
+}
 
 onMounted(async () => {
+  pdfContainer.value?.addEventListener("wheel", onWheel, { passive: false });
   const path = previewStore.lastSuccessfulPdfPath;
-  if (path) {
-    await renderPdf(path);
-  }
+  if (path) await loadPdf(path);
+});
+
+onUnmounted(() => {
+  pdfContainer.value?.removeEventListener("wheel", onWheel);
+  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
 });
 </script>
 
 <template>
-  <div class="pdf-viewer d-flex flex-column fill-height" style="position: relative;">
+  <div class="pdf-viewer">
     <!-- Toolbar -->
     <div class="pdf-toolbar d-flex align-center px-2 py-1" style="min-height: 36px;">
       <v-btn icon size="x-small" variant="text" @click="scale = Math.max(0.5, scale - 0.25)">
@@ -107,7 +118,7 @@ onMounted(async () => {
     <!-- PDF Pages -->
     <div
       ref="pdfContainer"
-      class="pdf-pages flex-grow-1 overflow-y-auto pa-2"
+      class="pdf-pages pa-2"
     />
 
     <!-- Empty state -->
@@ -127,7 +138,11 @@ onMounted(async () => {
 
 <style scoped>
 .pdf-viewer {
+  position: absolute;
+  inset: 0;
   background: rgb(var(--v-theme-surface-variant));
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -138,6 +153,21 @@ onMounted(async () => {
 }
 
 .pdf-pages {
+  flex: 1 1 0;
+  overflow-y: auto;
   background: rgb(var(--v-theme-surface-variant));
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--v-border-color), 0.4) transparent;
+}
+
+.pdf-pages::-webkit-scrollbar {
+  width: 6px;
+}
+.pdf-pages::-webkit-scrollbar-thumb {
+  background: rgba(var(--v-border-color), 0.4);
+  border-radius: 3px;
+}
+.pdf-pages::-webkit-scrollbar-track {
+  background: transparent;
 }
 </style>

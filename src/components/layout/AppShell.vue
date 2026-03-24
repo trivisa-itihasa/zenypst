@@ -114,20 +114,21 @@ async function togglePreview(): Promise<void> {
     </div>
 
     <!-- Main 3-panel body -->
-    <div class="app-body flex-grow-1 overflow-hidden">
-      <Splitpanes class="fill-height">
+    <div class="app-body">
+      <Splitpanes style="height: 100%;">
         <!-- File tree pane -->
         <Pane
           v-if="settingsStore.settings.fileTreeVisible"
           :size="fileTreeSize"
           :min-size="11"
+          class="pane-clip"
           style="min-width: 150px;"
         >
           <FileTree @open-file="handleOpenFile" />
         </Pane>
 
         <!-- Editor pane -->
-        <Pane :min-size="22" style="min-width: 300px;">
+        <Pane :min-size="22" class="pane-clip" style="min-width: 300px;">
           <EditorPanel
             @new-file="templatePickerDialog = true"
             @open-file="fileOps.openFileDialog"
@@ -139,6 +140,7 @@ async function togglePreview(): Promise<void> {
           v-if="settingsStore.settings.previewVisible"
           :size="previewSize"
           :min-size="15"
+          class="pane-clip"
           style="min-width: 200px;"
         >
           <PdfViewer />
@@ -178,11 +180,24 @@ async function togglePreview(): Promise<void> {
 <style scoped>
 .app-shell {
   height: 100vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
+/* ペイン内コンテンツが position: absolute で配置できるよう基準点を設定 */
+:deep(.pane-clip) {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
 .app-body {
-  position: relative;
+  /* height: 0 + flex-grow: 1 により子要素の height: 100% が正しく解決される */
+  height: 0;
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .typst-not-found-bar {

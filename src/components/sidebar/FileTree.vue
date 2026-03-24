@@ -22,7 +22,7 @@ function getRootName(path: string): string {
 </script>
 
 <template>
-  <div class="file-tree d-flex flex-column fill-height">
+  <div class="file-tree">
     <!-- Header -->
     <div class="file-tree-header d-flex align-center px-3 py-1">
       <span class="text-caption text-uppercase font-weight-medium tracking-widest flex-grow-1">
@@ -42,7 +42,7 @@ function getRootName(path: string): string {
     <v-divider />
 
     <!-- Tree content -->
-    <div class="file-tree-content flex-grow-1 overflow-y-auto py-1">
+    <div class="file-tree-content py-1">
       <v-progress-linear v-if="fileTreeStore.isLoading" indeterminate color="primary" height="2" />
 
       <template v-if="fileTreeStore.rootPath && !fileTreeStore.isLoading">
@@ -88,7 +88,11 @@ function getRootName(path: string): string {
 
 <style scoped>
 .file-tree {
+  position: absolute;
+  inset: 0;
   background: rgb(var(--v-theme-surface));
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -98,6 +102,7 @@ function getRootName(path: string): string {
 }
 
 .file-tree-content {
-  scrollbar-width: thin;
+  flex: 1 1 0;
+  overflow-y: auto;
 }
 </style>

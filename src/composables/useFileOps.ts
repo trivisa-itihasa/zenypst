@@ -3,6 +3,7 @@ import { useEditorStore } from "@/stores/editor";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useSettingsStore } from "@/stores/settings";
 import { useTemplateStore } from "@/stores/template";
+import { useCompiler } from "@/composables/useCompiler";
 import type { FileFilter } from "@/types";
 
 /**
@@ -13,6 +14,7 @@ export function useFileOps() {
   const fileTreeStore = useFileTreeStore();
   const settingsStore = useSettingsStore();
   const templateStore = useTemplateStore();
+  const { triggerCompile } = useCompiler();
 
   /** Open a file from disk by path. */
   async function openFile(path: string): Promise<void> {
@@ -25,6 +27,7 @@ export function useFileOps() {
       settingsStore.settings.recentPaths = recent.slice(0, 10);
       settingsStore.settings.lastOpenedPath = path;
       await settingsStore.save();
+      if (settingsStore.settings.previewMode === "realtime") await triggerCompile();
     } catch (err) {
       throw new Error(`Failed to open file: ${err}`);
     }
@@ -84,6 +87,7 @@ export function useFileOps() {
   /** Create a new file with optional template content. */
   async function newFile(content = "", fileName = "untitled.typ"): Promise<void> {
     editorStore.newUntitledTab(content, fileName);
+    if (settingsStore.settings.previewMode === "realtime") await triggerCompile();
   }
 
   /** Create a file on disk and open it. */

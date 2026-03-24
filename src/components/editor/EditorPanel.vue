@@ -94,12 +94,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="editor-panel d-flex flex-column fill-height">
+  <div class="editor-panel">
     <TabBar />
     <div
       v-if="activeTab"
       ref="editorContainer"
-      class="editor-container flex-grow-1"
+      class="editor-container"
     />
     <div
       v-else
@@ -121,12 +121,16 @@ onUnmounted(() => {
 
 <style scoped>
 .editor-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
 .editor-container {
+  flex: 1 1 0;
   overflow: hidden;
-  flex: 1;
 }
 
 /* Make CodeMirror fill the container */
@@ -137,6 +141,20 @@ onUnmounted(() => {
 .editor-container :deep(.cm-scroller) {
   overflow: auto;
   height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--v-border-color), 0.4) transparent;
+}
+
+.editor-container :deep(.cm-scroller::-webkit-scrollbar) {
+  width: 6px;
+  height: 6px;
+}
+.editor-container :deep(.cm-scroller::-webkit-scrollbar-thumb) {
+  background: rgba(var(--v-border-color), 0.4);
+  border-radius: 3px;
+}
+.editor-container :deep(.cm-scroller::-webkit-scrollbar-track) {
+  background: transparent;
 }
 
 .editor-empty {

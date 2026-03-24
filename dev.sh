@@ -21,6 +21,13 @@ err()  { echo -e "${RED}[zenypst]${RESET} $*" >&2; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# ── WSL/Mesa GPU フォールバック回避 ─────────────────────────────────────────
+# WSL2 では GPU アクセスに失敗して WebKit の起動が遅くなるため、
+# 最初からソフトウェアレンダリングを使うよう指定する。
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export LIBGL_ALWAYS_SOFTWARE=1
+
 echo ""
 echo -e "${BOLD}  Zenypst 開発サーバー${RESET}"
 echo "  ─────────────────────────────────────"

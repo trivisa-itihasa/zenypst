@@ -28,6 +28,7 @@ fn find_typst() -> String {
 
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct CompileError {
     pub severity: String,
     pub message: String,
@@ -37,6 +38,7 @@ pub struct CompileError {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct CompileResult {
     pub success: bool,
     pub pdf_path: Option<String>,
