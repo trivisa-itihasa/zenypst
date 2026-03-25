@@ -18,8 +18,6 @@ export function buildThemeExtension(colors: ThemeColors): Extension {
       },
       ".cm-content": {
         caretColor: colors.caret,
-        fontFamily: "inherit",
-        fontSize: "inherit",
       },
       ".cm-cursor, .cm-dropCursor": {
         borderLeftColor: colors.caret,

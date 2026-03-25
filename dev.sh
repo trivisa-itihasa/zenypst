@@ -28,6 +28,24 @@ export WEBKIT_DISABLE_DMABUF_RENDERER=1
 export WEBKIT_DISABLE_COMPOSITING_MODE=1
 export LIBGL_ALWAYS_SOFTWARE=1
 
+# ── IME (日本語入力) 設定 ────────────────────────────────────────────────────
+# GTK_IM_MODULE が未設定の場合のみ、インストール済みの IM を自動検出して設定する。
+if [ -z "${GTK_IM_MODULE:-}" ]; then
+  if command -v fcitx5 &>/dev/null; then
+    export GTK_IM_MODULE=fcitx
+    export QT_IM_MODULE=fcitx
+    export XMODIFIERS=@im=fcitx
+  elif command -v fcitx &>/dev/null; then
+    export GTK_IM_MODULE=fcitx
+    export QT_IM_MODULE=fcitx
+    export XMODIFIERS=@im=fcitx
+  elif command -v ibus-daemon &>/dev/null; then
+    export GTK_IM_MODULE=ibus
+    export QT_IM_MODULE=ibus
+    export XMODIFIERS=@im=ibus
+  fi
+fi
+
 echo ""
 echo -e "${BOLD}  Zenypst 開発サーバー${RESET}"
 echo "  ─────────────────────────────────────"

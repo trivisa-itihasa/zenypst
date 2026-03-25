@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick, computed } from "vue";
+import { ref, watch, onUnmounted, nextTick, computed } from "vue";
 import { EditorView } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
 import { useEditorStore } from "@/stores/editor";
@@ -16,6 +16,29 @@ const { activeTheme } = useTheme();
 
 const editorContainer = ref<HTMLElement | null>(null);
 let view: EditorView | null = null;
+
+// Intercept IME toggle keys (全角半角 etc.) in the capture phase so they never
+// reach CodeMirror's keydown handler, which would log a warning and potentially
+// call preventDefault. stopPropagation() in capture phase prevents the event
+// from reaching descendant elements (CM's contentDOM), while the OS/IME still
+// receives the key normally.
+function handleImeKey(e: KeyboardEvent): void {
+  if (
+    e.key === "ZenkakuHankaku" ||
+    e.key === "Zenkaku" ||
+    e.key === "Hankaku" ||
+    e.key === "Romaji" ||
+    e.key === "KanaMode" ||
+    e.key === "HiraganaKatakana"
+  ) {
+    e.stopPropagation();
+  }
+}
+
+watch(editorContainer, (el, prevEl) => {
+  prevEl?.removeEventListener("keydown", handleImeKey, { capture: true });
+  el?.addEventListener("keydown", handleImeKey, { capture: true });
+});
 
 // Compartments for live reconfiguration
 const dynamicCompartment = new Compartment();
@@ -68,12 +91,14 @@ watch(
   { immediate: true }
 );
 
-// Watch for theme/font changes
+// Watch for theme/font/editor-option changes
 watch(
   [
     () => activeTheme.value.colors,
     () => settingsStore.settings.fontFamily,
     () => settingsStore.settings.fontSize,
+    () => settingsStore.settings.wordWrap,
+    () => settingsStore.settings.showLineNumbers,
   ],
   ([colors, fontFamily, fontSize]) => {
     if (view) {
@@ -87,6 +112,7 @@ watch(
 );
 
 onUnmounted(() => {
+  editorContainer.value?.removeEventListener("keydown", handleImeKey, { capture: true });
   if (view) {
     view.destroy();
   }

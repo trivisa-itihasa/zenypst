@@ -35,3 +35,10 @@ base64 = "0.22"
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+
+[patch.crates-io]
+# Patched to add Japanese IME key mappings (ZenkakuHankaku etc.) which were
+# missing from the Linux keyboard handler, causing the keys to be dropped and
+# "Couldn't get key from code: Backquote" to be printed on stderr.
+tao = { path = "vendor/tao" }
+wry = { path = "vendor/wry" }
