@@ -6,11 +6,9 @@ export type CompileStatus = "idle" | "compiling" | "success" | "error";
 
 export const usePreviewStore = defineStore("preview", () => {
   const status = ref<CompileStatus>("idle");
-  const pdfPath = ref<string | null>(null);
+  const pages = ref<string[]>([]); // base64 PNG pages
   const errors = ref<CompileError[]>([]);
   const warnings = ref<CompileError[]>([]);
-  const lastSuccessfulPdfPath = ref<string | null>(null);
-  const pdfRevision = ref(0); // Increment to force PDF reload
 
   function setCompiling(): void {
     status.value = "compiling";
@@ -18,19 +16,18 @@ export const usePreviewStore = defineStore("preview", () => {
     warnings.value = [];
   }
 
-  function setSuccess(path: string): void {
+  function setSuccess(newPages: string[]): void {
     status.value = "success";
-    pdfPath.value = path;
-    lastSuccessfulPdfPath.value = path;
-    pdfRevision.value++;
+    pages.value = newPages;
     errors.value = [];
+    warnings.value = [];
   }
 
   function setError(errs: CompileError[], warns: CompileError[]): void {
     status.value = "error";
     errors.value = errs;
     warnings.value = warns;
-    // Keep the last successful PDF path visible
+    // Keep last successful pages visible
   }
 
   function setIdle(): void {
@@ -39,11 +36,9 @@ export const usePreviewStore = defineStore("preview", () => {
 
   return {
     status,
-    pdfPath,
+    pages,
     errors,
     warnings,
-    lastSuccessfulPdfPath,
-    pdfRevision,
     setCompiling,
     setSuccess,
     setError,

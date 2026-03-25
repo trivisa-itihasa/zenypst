@@ -1,5 +1,6 @@
 mod commands;
 mod utils;
+mod world;
 
 use commands::file::{
     read_file, write_file, list_directory, create_file, create_directory,
@@ -14,6 +15,7 @@ use commands::typst::{
     get_temp_input_path, get_temp_output_path,
     start_typst_watch, stop_typst_watch, WatchState,
 };
+use commands::native_compile::{compile_native, NativeCompilerState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,6 +24,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .manage(WatchState::new())
+        .manage(NativeCompilerState::new())
         .invoke_handler(tauri::generate_handler![
             // File commands
             read_file,
@@ -43,6 +46,8 @@ pub fn run() {
             get_temp_output_path,
             start_typst_watch,
             stop_typst_watch,
+            // Native compile command
+            compile_native,
             // Template commands
             list_templates,
             save_template,

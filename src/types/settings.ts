@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   wordWrap: false,
   activeThemeId: "zenypst-dark",
   previewMode: "realtime",
-  realtimeDebounceMs: 500,
+  realtimeDebounceMs: 150,
   fileTreeWidth: 250,
   previewWidth: 400,
   fileTreeVisible: true,

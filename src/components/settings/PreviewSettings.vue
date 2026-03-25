@@ -28,7 +28,7 @@ async function setMode(mode: AppSettings["previewMode"] | null): Promise<void> {
 }
 
 async function updateDebounce(value: number): Promise<void> {
-  const clamped = Math.max(100, Math.min(5000, value));
+  const clamped = Math.max(0, Math.min(5000, value));
   await settingsStore.update("realtimeDebounceMs", clamped);
 }
 </script>
@@ -42,35 +42,43 @@ async function updateDebounce(value: number): Promise<void> {
       :model-value="settingsStore.settings.previewMode"
       @update:model-value="setMode"
     >
-      <v-radio
-        v-for="mode in PREVIEW_MODES"
-        :key="mode.value"
-        :value="mode.value"
-        :label="mode.label"
-        density="compact"
-      >
-        <template #label>
-          <div>
-            <span>{{ mode.label }}</span>
-            <br />
-            <span class="text-caption text-medium-emphasis">{{ mode.description }}</span>
-          </div>
-        </template>
-      </v-radio>
+      <template v-for="mode in PREVIEW_MODES" :key="mode.value">
+        <v-radio :value="mode.value" density="compact" class="mode-radio">
+          <template #label>
+            <div>
+              <div>{{ mode.label }}</div>
+              <div class="text-caption text-medium-emphasis">{{ mode.description }}</div>
+            </div>
+          </template>
+        </v-radio>
+        <div v-if="mode.value === 'realtime'" class="debounce-wrap">
+          <v-text-field
+            :model-value="settingsStore.settings.realtimeDebounceMs"
+            :disabled="settingsStore.settings.previewMode !== 'realtime'"
+            label="Debounce (ms)"
+            type="number"
+            density="compact"
+            variant="outlined"
+            :min="0"
+            :max="5000"
+            hide-details
+            @update:model-value="(v) => updateDebounce(Number(v))"
+          />
+        </div>
+      </template>
     </v-radio-group>
-
-    <v-text-field
-      v-if="settingsStore.settings.previewMode === 'realtime'"
-      :model-value="settingsStore.settings.realtimeDebounceMs"
-      label="Debounce (ms)"
-      type="number"
-      density="compact"
-      variant="outlined"
-      :min="100"
-      :max="5000"
-      hide-details
-      class="mt-2"
-      @update:model-value="(v) => updateDebounce(Number(v))"
-    />
   </div>
 </template>
+
+<style scoped>
+:deep(.mode-radio .v-selection-control) {
+  align-items: flex-start;
+}
+:deep(.mode-radio .v-selection-control__wrapper) {
+  margin-top: 2px;
+}
+.debounce-wrap {
+  padding-left: 40px;
+  padding-bottom: 8px;
+}
+</style>
