@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
 
@@ -23,7 +23,7 @@ import type { Template } from "@/types";
 
 const settingsStore = useSettingsStore();
 const fileOps = useFileOps();
-const { checkTypstInstalled } = useCompiler();
+const { checkTypstInstalled, stopWatcher } = useCompiler();
 const { loadThemes } = useTheme();
 const templateStore = useTemplateStore();
 
@@ -37,6 +37,10 @@ const typstNotFoundBar = ref(false);
 // Splitpanes sizes (percentages)
 const fileTreeSize = ref(18); // ~250px in 1400px window
 const previewSize = ref(35);
+
+onUnmounted(async () => {
+  await stopWatcher();
+});
 
 onMounted(async () => {
   await settingsStore.load();
@@ -52,10 +56,8 @@ onMounted(async () => {
   if (settingsStore.settings.lastOpenedPath) {
     try {
       const path = settingsStore.settings.lastOpenedPath;
-      // Try as directory first
       const fileTreeStore = useFileTreeStore();
       await fileTreeStore.loadDirectory(path).catch(() => {
-        // If failed, try as file
         fileOps.openFile(path).catch(() => {});
       });
     } catch {}
@@ -65,6 +67,16 @@ onMounted(async () => {
   window.addEventListener("zenypst:new-file", () => {
     templatePickerDialog.value = true;
   });
+
+  // manual モードに切り替えたら watcher を停止する
+  watch(
+    () => settingsStore.settings.previewMode,
+    async (newMode) => {
+      if (newMode === "manual") {
+        await stopWatcher();
+      }
+    }
+  );
 });
 
 async function handleTemplateSelected(template: Template): Promise<void> {
@@ -75,12 +87,37 @@ async function handleOpenFile(path: string): Promise<void> {
   await fileOps.openFile(path);
 }
 
+// View menu: show only (ドラッグで非表示になったパネルを復元する)
 async function toggleFileTree(): Promise<void> {
-  await settingsStore.update("fileTreeVisible", !settingsStore.settings.fileTreeVisible);
+  if (!settingsStore.settings.fileTreeVisible) {
+    await settingsStore.update("fileTreeVisible", true);
+  }
 }
 
 async function togglePreview(): Promise<void> {
-  await settingsStore.update("previewVisible", !settingsStore.settings.previewVisible);
+  if (!settingsStore.settings.previewVisible) {
+    await settingsStore.update("previewVisible", true);
+  }
+}
+
+// ドラッグ中に幅が閾値を下回ったら非表示にスナップ。
+// min-size は閾値より小さい値（1%）にして、@resize が閾値通過を確実に検知できるようにする。
+const FILE_TREE_HIDE = 7; // % 以下で非表示
+const PREVIEW_HIDE = 10; // % 以下で非表示
+const PANE_MIN_SIZE = 1; // min-size は閾値より小さく設定（閾値到達前にmin-sizeで止まらないよう）
+
+function onPanesResized(panes: { size: number }[]): void {
+  if (settingsStore.settings.fileTreeVisible && settingsStore.settings.previewVisible) {
+    // [fileTree, editor, preview]
+    if (panes[0]?.size <= FILE_TREE_HIDE) settingsStore.update("fileTreeVisible", false);
+    if (panes[2]?.size <= PREVIEW_HIDE) settingsStore.update("previewVisible", false);
+  } else if (settingsStore.settings.fileTreeVisible) {
+    // [fileTree, editor]
+    if (panes[0]?.size <= FILE_TREE_HIDE) settingsStore.update("fileTreeVisible", false);
+  } else if (settingsStore.settings.previewVisible) {
+    // [editor, preview]
+    if (panes[1]?.size <= PREVIEW_HIDE) settingsStore.update("previewVisible", false);
+  }
 }
 </script>
 
@@ -115,20 +152,19 @@ async function togglePreview(): Promise<void> {
 
     <!-- Main 3-panel body -->
     <div class="app-body">
-      <Splitpanes style="height: 100%;">
+      <Splitpanes style="height: 100%;" @resize="onPanesResized">
         <!-- File tree pane -->
         <Pane
           v-if="settingsStore.settings.fileTreeVisible"
           :size="fileTreeSize"
-          :min-size="11"
+          :min-size="PANE_MIN_SIZE"
           class="pane-clip"
-          style="min-width: 150px;"
         >
           <FileTree @open-file="handleOpenFile" />
         </Pane>
 
         <!-- Editor pane -->
-        <Pane :min-size="22" class="pane-clip" style="min-width: 300px;">
+        <Pane :min-size="20" class="pane-clip">
           <EditorPanel
             @new-file="templatePickerDialog = true"
             @open-file="fileOps.openFileDialog"
@@ -139,9 +175,8 @@ async function togglePreview(): Promise<void> {
         <Pane
           v-if="settingsStore.settings.previewVisible"
           :size="previewSize"
-          :min-size="15"
+          :min-size="PANE_MIN_SIZE"
           class="pane-clip"
-          style="min-width: 200px;"
         >
           <PdfViewer />
         </Pane>

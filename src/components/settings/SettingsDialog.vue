@@ -104,8 +104,24 @@ async function toggleColorScheme(): Promise<void> {
                 label="Dark Mode"
                 density="compact"
                 hide-details
+                class="mb-4"
                 @update:model-value="toggleColorScheme"
               />
+              <v-slider
+                :model-value="settingsStore.settings.uiFontSize"
+                label="UI Font Size"
+                :min="11"
+                :max="18"
+                :step="1"
+                density="compact"
+                thumb-label
+                hide-details
+                @update:model-value="settingsStore.update('uiFontSize', $event)"
+              >
+                <template #append>
+                  <span class="text-caption" style="width: 36px;">{{ settingsStore.settings.uiFontSize }}px</span>
+                </template>
+              </v-slider>
             </div>
             <div v-show="tab === 'typst'">
               <TypstSettings />

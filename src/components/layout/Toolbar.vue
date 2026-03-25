@@ -59,19 +59,6 @@ async function handleCompile(): Promise<void> {
   await triggerCompile();
 }
 
-function zoomIn(): void {
-  if (settingsStore.settings.fontSize < 32) {
-    settingsStore.update("fontSize", settingsStore.settings.fontSize + 1);
-  }
-}
-function zoomOut(): void {
-  if (settingsStore.settings.fontSize > 8) {
-    settingsStore.update("fontSize", settingsStore.settings.fontSize - 1);
-  }
-}
-function zoomReset(): void {
-  settingsStore.update("fontSize", 14);
-}
 </script>
 
 <template>
@@ -97,6 +84,8 @@ function zoomReset(): void {
         <v-divider />
         <v-list-item prepend-icon="mdi-content-save" title="Save" subtitle="Ctrl+S" :disabled="!editorStore.activeTab" @click="handleSave" />
         <v-list-item prepend-icon="mdi-content-save-edit" title="Save As…" :disabled="!editorStore.activeTab" @click="handleSaveAs" />
+        <v-divider />
+        <v-list-item prepend-icon="mdi-file-document-multiple" title="Manage Templates" @click="emit('open-templates')" />
       </v-list>
     </v-menu>
 
@@ -108,18 +97,16 @@ function zoomReset(): void {
       <v-list density="compact">
         <v-list-item
           prepend-icon="mdi-file-tree"
-          :title="settingsStore.settings.fileTreeVisible ? 'Hide File Tree' : 'Show File Tree'"
+          title="Show File Tree"
+          :disabled="settingsStore.settings.fileTreeVisible"
           @click="emit('toggle-file-tree')"
         />
         <v-list-item
           prepend-icon="mdi-file-pdf-box"
-          :title="settingsStore.settings.previewVisible ? 'Hide Preview' : 'Show Preview'"
+          title="Show Preview"
+          :disabled="settingsStore.settings.previewVisible"
           @click="emit('toggle-preview')"
         />
-        <v-divider />
-        <v-list-item prepend-icon="mdi-magnify-plus" title="Zoom In" subtitle="Ctrl++" @click="zoomIn" />
-        <v-list-item prepend-icon="mdi-magnify-minus" title="Zoom Out" subtitle="Ctrl+-" @click="zoomOut" />
-        <v-list-item prepend-icon="mdi-magnify" title="Reset Zoom" subtitle="Ctrl+0" @click="zoomReset" />
       </v-list>
     </v-menu>
 
@@ -140,11 +127,6 @@ function zoomReset(): void {
       </template>
       <v-list density="compact">
         <v-list-item prepend-icon="mdi-information" title="About Zenypst" @click="aboutDialog = true" />
-        <v-list-item
-          prepend-icon="mdi-file-document-multiple"
-          title="Manage Templates"
-          @click="emit('open-templates')"
-        />
       </v-list>
     </v-menu>
 

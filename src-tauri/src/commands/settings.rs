@@ -38,6 +38,8 @@ pub struct AppSettings {
     // App
     #[serde(default = "default_color_scheme")]
     pub color_scheme: String,
+    #[serde(default = "default_ui_font_size")]
+    pub ui_font_size: u32,
     #[serde(default)]
     pub last_opened_path: Option<String>,
     #[serde(default)]
@@ -57,6 +59,7 @@ fn default_debounce_ms() -> u32 { 500 }
 fn default_file_tree_width() -> u32 { 250 }
 fn default_preview_width() -> u32 { 400 }
 fn default_color_scheme() -> String { "dark".to_string() }
+fn default_ui_font_size() -> u32 { 13 }
 
 impl Default for AppSettings {
     fn default() -> Self {
@@ -73,6 +76,7 @@ impl Default for AppSettings {
             file_tree_visible: true,
             preview_visible: true,
             color_scheme: default_color_scheme(),
+            ui_font_size: default_ui_font_size(),
             last_opened_path: None,
             recent_paths: vec![],
             typst_path: String::new(),

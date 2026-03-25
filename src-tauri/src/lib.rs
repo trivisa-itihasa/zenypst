@@ -12,6 +12,7 @@ use commands::template::{list_templates, save_template, delete_template};
 use commands::typst::{
     compile_typst, check_typst_installed, get_typst_version,
     get_temp_input_path, get_temp_output_path,
+    start_typst_watch, stop_typst_watch, WatchState,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -20,6 +21,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        .manage(WatchState::new())
         .invoke_handler(tauri::generate_handler![
             // File commands
             read_file,
@@ -39,6 +41,8 @@ pub fn run() {
             get_typst_version,
             get_temp_input_path,
             get_temp_output_path,
+            start_typst_watch,
+            stop_typst_watch,
             // Template commands
             list_templates,
             save_template,

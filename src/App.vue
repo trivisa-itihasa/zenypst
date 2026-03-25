@@ -10,10 +10,15 @@ const vuetifyTheme = useVuetifyTheme();
 // Sync Vuetify theme with settings
 watch(
   () => settingsStore.settings.colorScheme,
-  (scheme) => {
-    vuetifyTheme.global.name.value = scheme;
-  },
+  (scheme) => { vuetifyTheme.global.name.value = scheme; },
   { immediate: false }
+);
+
+// Apply UI font size as CSS variable
+watch(
+  () => settingsStore.settings.uiFontSize,
+  (size) => { document.documentElement.style.setProperty("--ui-font-size", `${size}px`); },
+  { immediate: true }
 );
 </script>
 

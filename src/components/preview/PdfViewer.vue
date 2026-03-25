@@ -25,23 +25,40 @@ async function loadPdfjs(): Promise<void> {
 /** Re-draw all pages using cachedPdf and current scale. */
 async function renderPages(): Promise<void> {
   if (!pdfContainer.value || !cachedPdf) return;
+
+  // スクロール位置を保持する
+  const savedScrollTop = pdfContainer.value.scrollTop;
+
   isLoading.value = true;
   try {
+    const numPages = cachedPdf.numPages;
+
+    // 先に全 canvas を DOM に追加して順序を確定する
     pdfContainer.value.innerHTML = "";
-    for (let pageNum = 1; pageNum <= cachedPdf.numPages; pageNum++) {
-      const page = await cachedPdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: scale.value });
+    const canvases: HTMLCanvasElement[] = Array.from({ length: numPages }, () => {
       const canvas = document.createElement("canvas");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
       canvas.style.display = "block";
       canvas.style.margin = "8px auto";
       canvas.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
-      const ctx = canvas.getContext("2d");
-      if (!ctx) continue;
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      pdfContainer.value.appendChild(canvas);
-    }
+      pdfContainer.value!.appendChild(canvas);
+      return canvas;
+    });
+
+    // 全ページを並列描画
+    await Promise.all(
+      canvases.map(async (canvas, i) => {
+        const page = await cachedPdf!.getPage(i + 1);
+        const viewport = page.getViewport({ scale: scale.value });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      })
+    );
+
+    // スクロール位置を復元
+    pdfContainer.value.scrollTop = savedScrollTop;
   } catch (err) {
     console.error("Failed to render pages:", err);
   } finally {
