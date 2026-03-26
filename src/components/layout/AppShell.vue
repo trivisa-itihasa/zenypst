@@ -21,7 +21,7 @@ import type { Template } from "@/types";
 
 const settingsStore = useSettingsStore();
 const fileOps = useFileOps();
-const { checkTypstInstalled, stopWatcher } = useCompiler();
+const { stopWatcher } = useCompiler();
 const { loadThemes } = useTheme();
 const templateStore = useTemplateStore();
 
@@ -162,11 +162,6 @@ onMounted(async () => {
   await settingsStore.load();
   await loadThemes();
   await templateStore.loadTemplates();
-
-  const installed = await checkTypstInstalled();
-  if (!installed) {
-    typstNotFoundBar.value = true;
-  }
 
   if (settingsStore.settings.lastOpenedPath) {
     try {
