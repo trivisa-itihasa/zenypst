@@ -21,11 +21,10 @@ export function useFileOps() {
     try {
       const content = await invoke<string>("read_file", { path });
       editorStore.openTab(path, content);
-      // Add to recent paths
+      // Add to recent paths (do not overwrite lastOpenedPath — that tracks the last opened folder)
       const recent = settingsStore.settings.recentPaths.filter((p) => p !== path);
       recent.unshift(path);
       settingsStore.settings.recentPaths = recent.slice(0, 10);
-      settingsStore.settings.lastOpenedPath = path;
       await settingsStore.save();
       const mode = settingsStore.settings.previewMode;
       if (mode === "realtime") {
@@ -108,6 +107,12 @@ export function useFileOps() {
     await fileTreeStore.refresh();
   }
 
+  /** Create a directory on disk. */
+  async function createDirectory(path: string): Promise<void> {
+    await invoke("create_directory", { path });
+    await fileTreeStore.refresh();
+  }
+
   /** Delete a file or directory from disk. */
   async function deletePath(path: string): Promise<void> {
     await invoke("delete_path", { path });
@@ -139,6 +144,7 @@ export function useFileOps() {
     saveAsActiveFile,
     newFile,
     createFileOnDisk,
+    createDirectory,
     deletePath,
     renamePath,
   };

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
@@ -14,11 +14,18 @@ const fileOps = useFileOps();
 const contextMenu = ref(false);
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
-const renameDialog = ref(false);
-const renameValue = ref("");
 const deleteDialog = ref(false);
+const newFileDialog = ref(false);
+const newFileValue = ref("");
+const newFolderDialog = ref(false);
+const newFolderValue = ref("");
 
-const paddingLeft = computed(() => `${((props.depth ?? 0) + 1) * 16}px`);
+// Inline rename state
+const isRenaming = ref(false);
+const renameInputValue = ref("");
+const renameInputRef = ref<HTMLInputElement | null>(null);
+
+const itemDepth = computed(() => props.depth ?? 0);
 
 const fileIcon = computed(() => {
   if (props.node.isDir) {
@@ -43,6 +50,7 @@ const fileIconColor = computed(() => {
 });
 
 function handleClick(): void {
+  if (isRenaming.value) return;
   if (props.node.isDir) {
     fileTreeStore.toggleExpanded(props.node.path);
   } else {
@@ -52,6 +60,7 @@ function handleClick(): void {
 
 function showContextMenu(event: MouseEvent): void {
   event.preventDefault();
+  event.stopPropagation();
   contextMenu.value = false;
   contextMenuX.value = event.clientX;
   contextMenuY.value = event.clientY;
@@ -60,24 +69,33 @@ function showContextMenu(event: MouseEvent): void {
   }, 0);
 }
 
-function startRename(): void {
-  renameValue.value = props.node.name;
-  renameDialog.value = true;
+// Inline rename
+function startInlineRename(event: MouseEvent): void {
+  event.stopPropagation();
+  renameInputValue.value = props.node.name;
+  isRenaming.value = true;
+  nextTick(() => {
+    renameInputRef.value?.focus();
+    renameInputRef.value?.select();
+  });
 }
 
-async function confirmRename(): Promise<void> {
-  if (!renameValue.value || renameValue.value === props.node.name) {
-    renameDialog.value = false;
-    return;
-  }
+async function confirmInlineRename(): Promise<void> {
+  if (!isRenaming.value) return;
+  isRenaming.value = false;
+  const newName = renameInputValue.value.trim();
+  if (!newName || newName === props.node.name) return;
   const dir = props.node.path.substring(0, props.node.path.lastIndexOf("/"));
-  const newPath = `${dir}/${renameValue.value}`;
+  const newPath = `${dir}/${newName}`;
   try {
     await fileOps.renamePath(props.node.path, newPath);
   } catch (err) {
     console.error("Rename failed:", err);
   }
-  renameDialog.value = false;
+}
+
+function cancelInlineRename(): void {
+  isRenaming.value = false;
 }
 
 async function confirmDelete(): Promise<void> {
@@ -92,6 +110,47 @@ async function confirmDelete(): Promise<void> {
 async function openInFileManager(): Promise<void> {
   await invoke("open_in_file_manager", { path: props.node.path });
 }
+
+function startNewFile(): void {
+  newFileValue.value = "";
+  newFileDialog.value = true;
+}
+
+async function confirmNewFile(): Promise<void> {
+  let name = newFileValue.value.trim();
+  if (!name) { newFileDialog.value = false; return; }
+  if (!name.includes(".")) name += ".typ";
+  const path = `${props.node.path}/${name}`;
+  try {
+    await fileOps.createFileOnDisk(path, "");
+    if (!fileTreeStore.isExpanded(props.node.path)) {
+      fileTreeStore.toggleExpanded(props.node.path);
+    }
+  } catch (err) {
+    console.error("Create file failed:", err);
+  }
+  newFileDialog.value = false;
+}
+
+function startNewFolder(): void {
+  newFolderValue.value = "";
+  newFolderDialog.value = true;
+}
+
+async function confirmNewFolder(): Promise<void> {
+  const name = newFolderValue.value.trim();
+  if (!name) { newFolderDialog.value = false; return; }
+  const path = `${props.node.path}/${name}`;
+  try {
+    await fileOps.createDirectory(path);
+    if (!fileTreeStore.isExpanded(props.node.path)) {
+      fileTreeStore.toggleExpanded(props.node.path);
+    }
+  } catch (err) {
+    console.error("Create folder failed:", err);
+  }
+  newFolderDialog.value = false;
+}
 </script>
 
 <template>
@@ -99,7 +158,7 @@ async function openInFileManager(): Promise<void> {
     <!-- Node row -->
     <div
       class="file-tree-item d-flex align-center"
-      :style="{ paddingLeft }"
+      :style="{ '--depth': itemDepth }"
       @click="handleClick"
       @contextmenu="showContextMenu"
     >
@@ -110,10 +169,28 @@ async function openInFileManager(): Promise<void> {
         class="mr-1"
         :icon="fileTreeStore.isExpanded(node.path) ? 'mdi-chevron-down' : 'mdi-chevron-right'"
       />
-      <span v-else class="mr-1" style="width: 16px; display: inline-block;" />
+      <span v-else class="mr-1" style="width: var(--tree-indent); display: inline-block;" />
 
       <v-icon size="16" :icon="fileIcon" :color="fileIconColor" class="mr-2" />
-      <span class="file-name text-body-2">{{ node.name }}</span>
+
+      <!-- Inline rename input or static label -->
+      <input
+        v-if="isRenaming"
+        ref="renameInputRef"
+        v-model="renameInputValue"
+        class="file-name-input"
+        @blur="confirmInlineRename"
+        @keyup.enter="confirmInlineRename"
+        @keyup.escape.stop="cancelInlineRename"
+        @click.stop
+        @dblclick.stop
+        @contextmenu.stop
+      />
+      <span
+        v-else
+        class="file-name text-body-2"
+        @dblclick.stop.prevent="startInlineRename"
+      >{{ node.name }}</span>
     </div>
 
     <!-- Children (if directory and expanded) -->
@@ -127,18 +204,25 @@ async function openInFileManager(): Promise<void> {
       />
     </template>
 
-    <!-- Context menu -->
+    <!-- Context menu: folders only show New File / New Folder -->
     <v-menu
       v-model="contextMenu"
       :style="{ left: `${contextMenuX}px`, top: `${contextMenuY}px` }"
     >
       <v-list density="compact">
-        <v-list-item
-          v-if="!node.isDir"
-          prepend-icon="mdi-pencil"
-          title="Rename"
-          @click="startRename"
-        />
+        <template v-if="node.isDir">
+          <v-list-item
+            prepend-icon="mdi-file-plus-outline"
+            title="New File"
+            @click="startNewFile"
+          />
+          <v-list-item
+            prepend-icon="mdi-folder-plus-outline"
+            title="New Folder"
+            @click="startNewFolder"
+          />
+          <v-divider />
+        </template>
         <v-list-item
           prepend-icon="mdi-delete"
           title="Delete"
@@ -152,22 +236,42 @@ async function openInFileManager(): Promise<void> {
       </v-list>
     </v-menu>
 
-    <!-- Rename dialog -->
-    <v-dialog v-model="renameDialog" max-width="400">
+    <!-- New File dialog (folder context) -->
+    <v-dialog v-model="newFileDialog" max-width="400">
       <v-card>
-        <v-card-title>Rename</v-card-title>
+        <v-card-title>New File</v-card-title>
         <v-card-text>
           <v-text-field
-            v-model="renameValue"
-            label="New name"
+            v-model="newFileValue"
+            label="File name"
             autofocus
-            @keyup.enter="confirmRename"
+            @keyup.enter="confirmNewFile"
           />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="renameDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="confirmRename">Rename</v-btn>
+          <v-btn @click="newFileDialog = false">Cancel</v-btn>
+          <v-btn color="primary" @click="confirmNewFile">Create</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- New Folder dialog (folder context) -->
+    <v-dialog v-model="newFolderDialog" max-width="400">
+      <v-card>
+        <v-card-title>New Folder</v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="newFolderValue"
+            label="Folder name"
+            autofocus
+            @keyup.enter="confirmNewFolder"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="newFolderDialog = false">Cancel</v-btn>
+          <v-btn color="primary" @click="confirmNewFolder">Create</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -193,6 +297,7 @@ async function openInFileManager(): Promise<void> {
 .file-tree-item {
   padding-top: 2px;
   padding-bottom: 2px;
+  padding-left: calc(var(--depth, 0) * var(--tree-indent) + 4px);
   padding-right: 8px;
   cursor: pointer;
   user-select: none;
@@ -208,6 +313,19 @@ async function openInFileManager(): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--ui-font-size);
+}
+
+.file-name-input {
+  background: transparent;
+  border: 1px solid rgb(var(--v-theme-primary));
+  border-radius: 2px;
+  color: inherit;
+  font-size: var(--ui-font-size);
+  font-family: inherit;
+  padding: 0 3px;
+  outline: none;
+  min-width: 0;
+  flex: 1;
 }
 </style>

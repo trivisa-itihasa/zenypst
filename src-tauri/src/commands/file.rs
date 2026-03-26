@@ -3,6 +3,7 @@ use std::path::Path;
 use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct FileNode {
     pub name: String,
     pub path: String,

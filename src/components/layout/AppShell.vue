@@ -164,13 +164,15 @@ onMounted(async () => {
   await templateStore.loadTemplates();
 
   if (settingsStore.settings.lastOpenedPath) {
-    try {
-      const path = settingsStore.settings.lastOpenedPath;
-      const fileTreeStore = useFileTreeStore();
-      await fileTreeStore.loadDirectory(path).catch(() => {
-        fileOps.openFile(path).catch(() => {});
-      });
-    } catch {}
+    const path = settingsStore.settings.lastOpenedPath;
+    const fileTreeStore = useFileTreeStore();
+    await fileTreeStore.loadDirectory(path);
+    if (fileTreeStore.error) {
+      // Saved path is no longer valid (or was a file path from an old bug); clear it
+      fileTreeStore.error = null;
+      settingsStore.settings.lastOpenedPath = null;
+      await settingsStore.save();
+    }
   }
 
   window.addEventListener("zenypst:new-file", () => {
@@ -353,7 +355,7 @@ async function togglePreview(): Promise<void> {
 
 /* Divider between panels */
 .splitter {
-  width: 4px;
+  width: var(--splitter-width);
   flex-shrink: 0;
   cursor: col-resize;
   background: rgba(var(--v-border-color), var(--v-border-opacity));
@@ -367,12 +369,12 @@ async function togglePreview(): Promise<void> {
 }
 
 .typst-not-found-bar {
-  height: 24px;
-  min-height: 24px;
+  height: var(--toolbar-height);
+  min-height: var(--toolbar-height);
   background: rgba(var(--v-theme-warning), 0.15);
   border-bottom: 1px solid rgba(var(--v-theme-warning), 0.4);
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--ui-font-size-sm);
 
   a {
     color: rgb(var(--v-theme-warning));
