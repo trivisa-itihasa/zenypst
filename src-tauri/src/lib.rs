@@ -10,12 +10,7 @@ use commands::settings::{
     load_settings, save_settings, list_themes, save_theme, delete_theme,
 };
 use commands::template::{list_templates, save_template, delete_template};
-use commands::typst::{
-    compile_typst, check_typst_installed, get_typst_version,
-    get_temp_input_path, get_temp_output_path,
-    start_typst_watch, stop_typst_watch, WatchState,
-};
-use commands::native_compile::{compile_native, NativeCompilerState};
+use commands::native_compile::{compile_native, export_pdf, get_typst_version, locate_source, NativeCompilerState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -23,7 +18,6 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
-        .manage(WatchState::new())
         .manage(NativeCompilerState::new())
         .invoke_handler(tauri::generate_handler![
             // File commands
@@ -38,16 +32,11 @@ pub fn run() {
             pick_folder,
             pick_file,
             save_file_dialog,
-            // Typst commands
-            compile_typst,
-            check_typst_installed,
-            get_typst_version,
-            get_temp_input_path,
-            get_temp_output_path,
-            start_typst_watch,
-            stop_typst_watch,
-            // Native compile command
+            // Typst (native, in-process)
             compile_native,
+            export_pdf,
+            get_typst_version,
+            locate_source,
             // Template commands
             list_templates,
             save_template,

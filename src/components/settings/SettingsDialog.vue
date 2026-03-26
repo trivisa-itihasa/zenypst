@@ -77,8 +77,8 @@ async function toggleColorScheme(): Promise<void> {
                 @click="tab = 'appearance'"
               />
               <v-list-item
-                prepend-icon="mdi-console"
-                title="Typst CLI"
+                prepend-icon="mdi-typewriter"
+                title="Typst"
                 value="typst"
                 :active="tab === 'typst'"
                 active-color="primary"

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
-import { Splitpanes, Pane } from "splitpanes";
-import "splitpanes/dist/splitpanes.css";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 
 import Toolbar from "./Toolbar.vue";
 import StatusBar from "./StatusBar.vue";
@@ -34,11 +32,129 @@ const templatePickerDialog = ref(false);
 const templateManagerDialog = ref(false);
 const typstNotFoundBar = ref(false);
 
-// Splitpanes sizes (percentages)
-const fileTreeSize = ref(18); // ~250px in 1400px window
-const previewSize = ref(35);
+// --- Panel sizing constants (px) ---
+const MIN_FILE_TREE = 180;
+const MIN_PREVIEW = 200;
+const MIN_EDITOR = 150;
+
+// --- Stored panel widths (px, updated after each drag) ---
+const fileTreeWidth = ref(240);
+const previewWidth = ref(320);
+
+// --- Drag state ---
+type DragSide = "left" | "right";
+const dragging = ref<DragSide | null>(null);
+const dragStartX = ref(0);
+const dragStartWidth = ref(0);
+
+// --- Virtual widths (track drag position; can go below MIN to detect hide threshold) ---
+const fileTreeVirtualWidth = ref(240);
+const previewVirtualWidth = ref(320);
+
+// --- Body ref for total width measurement ---
+const bodyRef = ref<HTMLElement | null>(null);
+
+// --- Computed visibility ---
+// During a drag: derived from virtual width; otherwise from persisted settings.
+const fileTreeShown = computed<boolean>(() => {
+  if (dragging.value === "left") {
+    return fileTreeVirtualWidth.value >= MIN_FILE_TREE / 2;
+  }
+  return settingsStore.settings.fileTreeVisible;
+});
+
+const previewShown = computed<boolean>(() => {
+  if (dragging.value === "right") {
+    return previewVirtualWidth.value >= MIN_PREVIEW / 2;
+  }
+  return settingsStore.settings.previewVisible;
+});
+
+// --- Computed display widths ---
+// Clamped to MIN when visible so the panel never shrinks below its minimum.
+const fileTreeDisplayWidth = computed<number>(() => {
+  if (!fileTreeShown.value) return 0;
+  return Math.max(fileTreeVirtualWidth.value, MIN_FILE_TREE);
+});
+
+const previewDisplayWidth = computed<number>(() => {
+  if (!previewShown.value) return 0;
+  return Math.max(previewVirtualWidth.value, MIN_PREVIEW);
+});
+
+// --- Drag start ---
+function startLeftDrag(e: MouseEvent): void {
+  e.preventDefault();
+  fileTreeVirtualWidth.value = fileTreeWidth.value;
+  dragStartX.value = e.clientX;
+  dragStartWidth.value = fileTreeWidth.value;
+  dragging.value = "left";
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+}
+
+function startRightDrag(e: MouseEvent): void {
+  e.preventDefault();
+  previewVirtualWidth.value = previewWidth.value;
+  dragStartX.value = e.clientX;
+  dragStartWidth.value = previewWidth.value;
+  dragging.value = "right";
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+}
+
+// --- Mouse move ---
+function onMouseMove(e: MouseEvent): void {
+  const dx = e.clientX - dragStartX.value;
+  const bodyWidth = bodyRef.value?.clientWidth ?? window.innerWidth;
+
+  if (dragging.value === "left") {
+    // Don't let file tree eat into editor's minimum width
+    const reservedForOthers = (previewShown.value ? previewDisplayWidth.value : 0) + MIN_EDITOR;
+    const maxWidth = bodyWidth - reservedForOthers;
+    fileTreeVirtualWidth.value = Math.min(dragStartWidth.value + dx, maxWidth);
+  } else if (dragging.value === "right") {
+    // Don't let preview eat into editor's minimum width
+    const reservedForOthers = (fileTreeShown.value ? fileTreeDisplayWidth.value : 0) + MIN_EDITOR;
+    const maxWidth = bodyWidth - reservedForOthers;
+    previewVirtualWidth.value = Math.min(dragStartWidth.value - dx, maxWidth);
+  }
+}
+
+// --- Mouse up: commit final state ---
+function onMouseUp(): void {
+  if (dragging.value === "left") {
+    if (fileTreeShown.value) {
+      fileTreeWidth.value = fileTreeDisplayWidth.value;
+      settingsStore.update("fileTreeVisible", true);
+    } else {
+      settingsStore.update("fileTreeVisible", false);
+    }
+  } else if (dragging.value === "right") {
+    if (previewShown.value) {
+      previewWidth.value = previewDisplayWidth.value;
+      settingsStore.update("previewVisible", true);
+    } else {
+      settingsStore.update("previewVisible", false);
+    }
+  }
+
+  dragging.value = null;
+  document.removeEventListener("mousemove", onMouseMove);
+  document.removeEventListener("mouseup", onMouseUp);
+}
+
+// Apply col-resize cursor and suppress text selection during drag
+watch(dragging, (val) => {
+  document.body.style.cursor = val ? "col-resize" : "";
+  (document.body.style as CSSStyleDeclaration & { userSelect: string }).userSelect = val ? "none" : "";
+});
 
 onUnmounted(async () => {
+  document.removeEventListener("mousemove", onMouseMove);
+  document.removeEventListener("mouseup", onMouseUp);
+  document.body.style.cursor = "";
+  (document.body.style as CSSStyleDeclaration & { userSelect: string }).userSelect = "";
   await stopWatcher();
 });
 
@@ -52,7 +168,6 @@ onMounted(async () => {
     typstNotFoundBar.value = true;
   }
 
-  // Restore last opened path
   if (settingsStore.settings.lastOpenedPath) {
     try {
       const path = settingsStore.settings.lastOpenedPath;
@@ -63,12 +178,10 @@ onMounted(async () => {
     } catch {}
   }
 
-  // Listen for new-file events from keybindings
   window.addEventListener("zenypst:new-file", () => {
     templatePickerDialog.value = true;
   });
 
-  // manual モードに切り替えたら watcher を停止する
   watch(
     () => settingsStore.settings.previewMode,
     async (newMode) => {
@@ -87,36 +200,20 @@ async function handleOpenFile(path: string): Promise<void> {
   await fileOps.openFile(path);
 }
 
-// View menu: show only (ドラッグで非表示になったパネルを復元する)
+// Toolbar show-panel actions (only re-show; hiding is via drag)
 async function toggleFileTree(): Promise<void> {
   if (!settingsStore.settings.fileTreeVisible) {
+    fileTreeVirtualWidth.value = Math.max(fileTreeWidth.value, MIN_FILE_TREE);
+    fileTreeWidth.value = fileTreeVirtualWidth.value;
     await settingsStore.update("fileTreeVisible", true);
   }
 }
 
 async function togglePreview(): Promise<void> {
   if (!settingsStore.settings.previewVisible) {
+    previewVirtualWidth.value = Math.max(previewWidth.value, MIN_PREVIEW);
+    previewWidth.value = previewVirtualWidth.value;
     await settingsStore.update("previewVisible", true);
-  }
-}
-
-// ドラッグ中に幅が閾値を下回ったら非表示にスナップ。
-// min-size は閾値より小さい値（1%）にして、@resize が閾値通過を確実に検知できるようにする。
-const FILE_TREE_HIDE = 7; // % 以下で非表示
-const PREVIEW_HIDE = 10; // % 以下で非表示
-const PANE_MIN_SIZE = 1; // min-size は閾値より小さく設定（閾値到達前にmin-sizeで止まらないよう）
-
-function onPanesResized(panes: { size: number }[]): void {
-  if (settingsStore.settings.fileTreeVisible && settingsStore.settings.previewVisible) {
-    // [fileTree, editor, preview]
-    if (panes[0]?.size <= FILE_TREE_HIDE) settingsStore.update("fileTreeVisible", false);
-    if (panes[2]?.size <= PREVIEW_HIDE) settingsStore.update("previewVisible", false);
-  } else if (settingsStore.settings.fileTreeVisible) {
-    // [fileTree, editor]
-    if (panes[0]?.size <= FILE_TREE_HIDE) settingsStore.update("fileTreeVisible", false);
-  } else if (settingsStore.settings.previewVisible) {
-    // [editor, preview]
-    if (panes[1]?.size <= PREVIEW_HIDE) settingsStore.update("previewVisible", false);
   }
 }
 </script>
@@ -132,7 +229,7 @@ function onPanesResized(panes: { size: number }[]): void {
       @toggle-preview="togglePreview"
     />
 
-    <!-- Typst not found banner (Toolbarの直下) -->
+    <!-- Typst not found banner -->
     <div
       v-if="typstNotFoundBar"
       class="typst-not-found-bar d-flex align-center px-3"
@@ -151,36 +248,50 @@ function onPanesResized(panes: { size: number }[]): void {
     </div>
 
     <!-- Main 3-panel body -->
-    <div class="app-body">
-      <Splitpanes style="height: 100%;" @resize="onPanesResized">
-        <!-- File tree pane -->
-        <Pane
-          v-if="settingsStore.settings.fileTreeVisible"
-          :size="fileTreeSize"
-          :min-size="PANE_MIN_SIZE"
-          class="pane-clip"
-        >
-          <FileTree @open-file="handleOpenFile" />
-        </Pane>
+    <div class="app-body" ref="bodyRef">
+      <!-- File tree panel:
+           Stays in the DOM while dragging (so the splitter tracks the cursor),
+           but the FileTree content is hidden via v-show when below the threshold. -->
+      <div
+        v-if="fileTreeShown || dragging === 'left'"
+        class="pane pane-side"
+        :style="{ width: fileTreeDisplayWidth + 'px' }"
+      >
+        <FileTree v-show="fileTreeShown" @open-file="handleOpenFile" />
+      </div>
 
-        <!-- Editor pane -->
-        <Pane :min-size="20" class="pane-clip">
-          <EditorPanel
-            @new-file="templatePickerDialog = true"
-            @open-file="fileOps.openFileDialog"
-          />
-        </Pane>
+      <!-- Left splitter -->
+      <div
+        v-if="fileTreeShown || dragging === 'left'"
+        class="splitter"
+        :class="{ 'splitter--active': dragging === 'left' }"
+        @mousedown="startLeftDrag"
+      />
 
-        <!-- PDF preview pane -->
-        <Pane
-          v-if="settingsStore.settings.previewVisible"
-          :size="previewSize"
-          :min-size="PANE_MIN_SIZE"
-          class="pane-clip"
-        >
-          <PdfViewer />
-        </Pane>
-      </Splitpanes>
+      <!-- Editor panel (flex: 1, takes remaining space) -->
+      <div class="pane pane-editor">
+        <EditorPanel
+          @new-file="templatePickerDialog = true"
+          @open-file="fileOps.openFileDialog"
+        />
+      </div>
+
+      <!-- Right splitter -->
+      <div
+        v-if="previewShown || dragging === 'right'"
+        class="splitter"
+        :class="{ 'splitter--active': dragging === 'right' }"
+        @mousedown="startRightDrag"
+      />
+
+      <!-- Preview panel -->
+      <div
+        v-if="previewShown || dragging === 'right'"
+        class="pane pane-side"
+        :style="{ width: previewDisplayWidth + 'px' }"
+      >
+        <PdfViewer v-show="previewShown" />
+      </div>
     </div>
 
     <!-- Status bar -->
@@ -220,19 +331,44 @@ function onPanesResized(panes: { size: number }[]): void {
   overflow: hidden;
 }
 
-/* ペイン内コンテンツが position: absolute で配置できるよう基準点を設定 */
-:deep(.pane-clip) {
-  position: relative !important;
-  overflow: hidden !important;
-}
-
 .app-body {
-  /* height: 0 + flex-grow: 1 により子要素の height: 100% が正しく解決される */
+  /* height: 0 + flex-grow: 1 ensures child height: 100% resolves correctly */
   height: 0;
   flex-grow: 1;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+}
+
+.pane {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Side panels have fixed pixel widths */
+.pane-side {
+  flex-shrink: 0;
+}
+
+/* Editor fills remaining space */
+.pane-editor {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Divider between panels */
+.splitter {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: rgba(var(--v-border-color), var(--v-border-opacity));
+  transition: background 0.1s;
+  z-index: 10;
+}
+
+.splitter:hover,
+.splitter--active {
+  background: rgb(var(--v-theme-primary));
 }
 
 .typst-not-found-bar {
@@ -246,27 +382,5 @@ function onPanesResized(panes: { size: number }[]): void {
   a {
     color: rgb(var(--v-theme-warning));
   }
-}
-
-/* Style splitpanes gutters */
-:deep(.splitpanes__splitter) {
-  background: rgba(var(--v-border-color), var(--v-border-opacity));
-  position: relative;
-}
-
-:deep(.splitpanes__splitter:hover) {
-  background: rgb(var(--v-theme-primary));
-}
-
-/* 横並び（デフォルト）: 縦の仕切り線 */
-:deep(.splitpanes--vertical > .splitpanes__splitter) {
-  width: 4px;
-  cursor: col-resize;
-}
-
-/* 縦積み: 横の仕切り線 */
-:deep(.splitpanes--horizontal > .splitpanes__splitter) {
-  height: 4px;
-  cursor: row-resize;
 }
 </style>

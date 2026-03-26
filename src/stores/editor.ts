@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 export const useEditorStore = defineStore("editor", () => {
   const tabs = ref<FileTab[]>([]);
   const activeTabId = ref<string | null>(null);
+  const jumpRequest = ref<{ line: number; col: number } | null>(null);
 
   const activeTab = computed(() =>
     tabs.value.find((t) => t.id === activeTabId.value) ?? null
@@ -98,16 +99,27 @@ export const useEditorStore = defineStore("editor", () => {
     }
   }
 
+  function requestJump(line: number, col: number): void {
+    jumpRequest.value = { line, col };
+  }
+
+  function clearJumpRequest(): void {
+    jumpRequest.value = null;
+  }
+
   return {
     tabs,
     activeTabId,
     activeTab,
     hasDirtyTabs,
+    jumpRequest,
     openTab,
     newUntitledTab,
     closeTab,
     updateContent,
     markSaved,
     setActiveTab,
+    requestJump,
+    clearJumpRequest,
   };
 });

@@ -1,4 +1,3 @@
-import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useEditorStore } from "@/stores/editor";
@@ -12,7 +11,13 @@ let nativeListening = false;
 
 interface NativeRenderResult {
   success: boolean;
-  pages: string[];
+  pdf: string | null;
+  errors: CompileError[];
+  warnings: CompileError[];
+}
+
+interface PdfExportResult {
+  success: boolean;
   errors: CompileError[];
   warnings: CompileError[];
 }
@@ -22,28 +27,14 @@ export function useCompiler() {
   const previewStore = usePreviewStore();
   const settingsStore = useSettingsStore();
 
-  const isTypstInstalled = ref<boolean | null>(null);
-
-  async function checkTypstInstalled(): Promise<boolean> {
-    try {
-      const typstPath = settingsStore.settings.typstPath || undefined;
-      const installed = await invoke<boolean>("check_typst_installed", { typstPath });
-      isTypstInstalled.value = installed;
-      return installed;
-    } catch {
-      isTypstInstalled.value = false;
-      return false;
-    }
-  }
-
   /** Ensure we're listening for native compile results. */
   async function ensureListening(): Promise<void> {
     if (nativeListening) return;
     nativeListening = true;
     nativeUnlisten = await listen<NativeRenderResult>("typst-native-result", (event) => {
       const result = event.payload;
-      if (result.success) {
-        previewStore.setSuccess(result.pages);
+      if (result.success && result.pdf) {
+        previewStore.setSuccess(result.pdf);
       } else {
         previewStore.setError(result.errors ?? [], result.warnings ?? []);
       }
@@ -59,6 +50,15 @@ export function useCompiler() {
     } catch (err) {
       previewStore.setError([{ severity: "error", message: String(err) }], []);
     }
+  }
+
+  /** Export the current document to a PDF file. */
+  async function exportPdf(content: string, root: string | undefined, outputPath: string): Promise<PdfExportResult> {
+    return await invoke<PdfExportResult>("export_pdf", {
+      content,
+      root: root ?? null,
+      outputPath,
+    });
   }
 
   /** Schedule a compile with debounce (realtime mode). */
@@ -93,12 +93,10 @@ export function useCompiler() {
   }
 
   return {
-    isTypstInstalled,
-    checkTypstInstalled,
     scheduleCompile,
     triggerCompile,
+    exportPdf,
     stopWatcher,
-    // Keep for compatibility
     startWatcher: async () => {},
     compile: (path: string, content: string) => compileNative(content, path ? getDirectory(path) : undefined),
   };

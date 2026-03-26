@@ -6,7 +6,7 @@ export type CompileStatus = "idle" | "compiling" | "success" | "error";
 
 export const usePreviewStore = defineStore("preview", () => {
   const status = ref<CompileStatus>("idle");
-  const pages = ref<string[]>([]); // base64 PNG pages
+  const pdf = ref<string | null>(null); // base64-encoded PDF
   const errors = ref<CompileError[]>([]);
   const warnings = ref<CompileError[]>([]);
 
@@ -16,9 +16,9 @@ export const usePreviewStore = defineStore("preview", () => {
     warnings.value = [];
   }
 
-  function setSuccess(newPages: string[]): void {
+  function setSuccess(newPdf: string): void {
     status.value = "success";
-    pages.value = newPages;
+    pdf.value = newPdf;
     errors.value = [];
     warnings.value = [];
   }
@@ -27,7 +27,7 @@ export const usePreviewStore = defineStore("preview", () => {
     status.value = "error";
     errors.value = errs;
     warnings.value = warns;
-    // Keep last successful pages visible
+    // Keep last successful PDF visible
   }
 
   function setIdle(): void {
@@ -36,7 +36,7 @@ export const usePreviewStore = defineStore("preview", () => {
 
   return {
     status,
-    pages,
+    pdf,
     errors,
     warnings,
     setCompiling,

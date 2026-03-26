@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import { useFileOps } from "@/composables/useFileOps";
 import { useCompiler } from "@/composables/useCompiler";
 import { useSettingsStore } from "@/stores/settings";
@@ -14,7 +15,7 @@ const emit = defineEmits<{
 }>();
 
 const fileOps = useFileOps();
-const { triggerCompile, isTypstInstalled } = useCompiler();
+const { triggerCompile, exportPdf } = useCompiler();
 const settingsStore = useSettingsStore();
 const editorStore = useEditorStore();
 
@@ -26,6 +27,17 @@ const helpMenu = ref(false);
 
 // About dialog
 const aboutDialog = ref(false);
+
+// Snackbar
+const snackbar = ref(false);
+const snackbarText = ref("");
+const snackbarColor = ref("error");
+
+function showSnackbar(text: string, color = "error"): void {
+  snackbarText.value = text;
+  snackbarColor.value = color;
+  snackbar.value = true;
+}
 
 async function handleNewFile(): Promise<void> {
   fileMenu.value = false;
@@ -55,10 +67,39 @@ async function handleSaveAs(): Promise<void> {
   await fileOps.saveAsActiveFile();
 }
 
+async function handleExportPdf(): Promise<void> {
+  fileMenu.value = false;
+  const tab = editorStore.activeTab;
+  if (!tab) return;
+
+  const defaultName = tab.name.replace(/\.typ$/, "") + ".pdf";
+  const outputPath = await invoke<string | null>("save_file_dialog", { defaultName });
+  if (!outputPath) return;
+
+  const root = tab.path ? getDirectory(tab.path) : undefined;
+  try {
+    const result = await exportPdf(tab.content, root, outputPath);
+    if (result.success) {
+      showSnackbar("PDF exported successfully.", "success");
+    } else {
+      const msg = result.errors.map((e) => e.message).join("; ");
+      showSnackbar("Export failed: " + msg, "error");
+    }
+  } catch (err) {
+    showSnackbar("Export failed: " + String(err), "error");
+  }
+}
+
 async function handleCompile(): Promise<void> {
   await triggerCompile();
 }
 
+function getDirectory(filePath: string): string {
+  const sep = filePath.includes("/") ? "/" : "\\";
+  const parts = filePath.split(sep);
+  parts.pop();
+  return parts.join(sep) || "/";
+}
 </script>
 
 <template>
@@ -84,6 +125,8 @@ async function handleCompile(): Promise<void> {
         <v-divider />
         <v-list-item prepend-icon="mdi-content-save" title="Save" subtitle="Ctrl+S" :disabled="!editorStore.activeTab" @click="handleSave" />
         <v-list-item prepend-icon="mdi-content-save-edit" title="Save As…" :disabled="!editorStore.activeTab" @click="handleSaveAs" />
+        <v-divider />
+        <v-list-item prepend-icon="mdi-file-pdf-box" title="Export PDF…" :disabled="!editorStore.activeTab" @click="handleExportPdf" />
         <v-divider />
         <v-list-item prepend-icon="mdi-file-document-multiple" title="Manage Templates" @click="emit('open-templates')" />
       </v-list>
@@ -145,15 +188,6 @@ async function handleCompile(): Promise<void> {
     >
       Compile
     </v-btn>
-
-    <!-- Typst not found warning -->
-    <v-tooltip v-if="isTypstInstalled === false" text="Typst CLI not found. Install Typst and add it to PATH." location="bottom">
-      <template #activator="{ props }">
-        <v-chip color="error" size="small" class="mr-2" v-bind="props" prepend-icon="mdi-alert">
-          Typst not found
-        </v-chip>
-      </template>
-    </v-tooltip>
   </div>
 
   <!-- About dialog -->
@@ -174,6 +208,14 @@ async function handleCompile(): Promise<void> {
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <!-- Snackbar -->
+  <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="4000" location="bottom">
+    {{ snackbarText }}
+    <template #actions>
+      <v-btn variant="text" @click="snackbar = false">Close</v-btn>
+    </template>
+  </v-snackbar>
 </template>
 
 <style scoped>

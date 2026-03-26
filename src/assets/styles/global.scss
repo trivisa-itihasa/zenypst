@@ -61,12 +61,3 @@ html, body, #app {
   transition-duration: 80ms !important;
 }
 
-// Splitpanes
-.splitpanes.default-theme .splitpanes__pane {
-  background: transparent;
-}
-
-// Prevent text selection during drag
-.splitpanes__splitter {
-  user-select: none;
-}

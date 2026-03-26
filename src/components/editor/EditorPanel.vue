@@ -76,6 +76,25 @@ function mountEditor(content: string): void {
   });
 }
 
+// Watch for jump requests from PDF viewer (double-click sync)
+watch(
+  () => editorStore.jumpRequest,
+  (req) => {
+    if (!req || !view) return;
+    editorStore.clearJumpRequest();
+    const doc = view.state.doc;
+    // line is 1-indexed; CodeMirror doc.line() is also 1-indexed
+    const lineNum = Math.min(Math.max(req.line, 1), doc.lines);
+    const line = doc.line(lineNum);
+    const pos = Math.min(line.from + req.col - 1, line.to);
+    view.dispatch({
+      selection: { anchor: pos },
+      scrollIntoView: true,
+    });
+    view.focus();
+  }
+);
+
 // Watch for active tab changes
 watch(
   activeTab,

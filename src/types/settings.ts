@@ -25,8 +25,6 @@ export interface AppSettings {
   lastOpenedPath: string | null;
   recentPaths: string[];
 
-  // Typst
-  typstPath: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -45,7 +43,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   uiFontSize: 13,
   lastOpenedPath: null,
   recentPaths: [],
-  typstPath: "",
 };
 
 /** Typst compilation result from the Rust backend. */
