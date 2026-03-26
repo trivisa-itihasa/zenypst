@@ -115,10 +115,21 @@ async function renderPages(pdf: PDFDocumentProxy, s: number, token: number): Pro
     });
     await textLayer.render();
 
-    // Click → jump editor cursor to source location
+    // Single click → jump editor cursor to source location
+    // Drag and double-click are left to the browser for text selection
     const pageIndex = pageNum - 1;
     const userScale = s;
+    let mouseDownX = 0;
+    let mouseDownY = 0;
+    textLayerDiv.addEventListener("mousedown", (e) => {
+      mouseDownX = e.clientX;
+      mouseDownY = e.clientY;
+    });
     textLayerDiv.addEventListener("click", (e) => {
+      if (e.detail !== 1) return; // ignore double-click
+      const dx = e.clientX - mouseDownX;
+      const dy = e.clientY - mouseDownY;
+      if (dx * dx + dy * dy > 16) return; // ignore drag (>4px)
       handleTextLayerClick(e, pageIndex, userScale);
     });
 
