@@ -4,6 +4,7 @@ import { useEditorStore } from "@/stores/editor";
 import { usePreviewStore } from "@/stores/preview";
 import { useSettingsStore } from "@/stores/settings";
 import type { CompileError } from "@/types";
+import { getDirectory } from "@/utils/path";
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let nativeUnlisten: UnlistenFn | null = null;
@@ -100,11 +101,4 @@ export function useCompiler() {
     startWatcher: async () => {},
     compile: (path: string, content: string) => compileNative(content, path ? getDirectory(path) : undefined),
   };
-}
-
-function getDirectory(filePath: string): string {
-  const sep = filePath.includes("/") ? "/" : "\\";
-  const parts = filePath.split(sep);
-  parts.pop();
-  return parts.join(sep) || "/";
 }

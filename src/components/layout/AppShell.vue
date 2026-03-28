@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 
 import Toolbar from "./Toolbar.vue";
+import ActivityBar from "./ActivityBar.vue";
 import StatusBar from "./StatusBar.vue";
 import FileTree from "@/components/sidebar/FileTree.vue";
 import EditorPanel from "@/components/editor/EditorPanel.vue";
@@ -32,30 +33,23 @@ const templatePickerDialog = ref(false);
 const templateManagerDialog = ref(false);
 const typstNotFoundBar = ref(false);
 
-// --- Panel sizing constants (px) ---
 const MIN_FILE_TREE = 180;
 const MIN_PREVIEW = 200;
 const MIN_EDITOR = 150;
 
-// --- Stored panel widths (px, updated after each drag) ---
 const fileTreeWidth = ref(240);
 const previewWidth = ref(320);
 
-// --- Drag state ---
 type DragSide = "left" | "right";
 const dragging = ref<DragSide | null>(null);
 const dragStartX = ref(0);
 const dragStartWidth = ref(0);
 
-// --- Virtual widths (track drag position; can go below MIN to detect hide threshold) ---
 const fileTreeVirtualWidth = ref(240);
 const previewVirtualWidth = ref(320);
 
-// --- Body ref for total width measurement ---
 const bodyRef = ref<HTMLElement | null>(null);
 
-// --- Computed visibility ---
-// During a drag: derived from virtual width; otherwise from persisted settings.
 const fileTreeShown = computed<boolean>(() => {
   if (dragging.value === "left") {
     return fileTreeVirtualWidth.value >= MIN_FILE_TREE / 2;
@@ -70,8 +64,6 @@ const previewShown = computed<boolean>(() => {
   return settingsStore.settings.previewVisible;
 });
 
-// --- Computed display widths ---
-// Clamped to MIN when visible so the panel never shrinks below its minimum.
 const fileTreeDisplayWidth = computed<number>(() => {
   if (!fileTreeShown.value) return 0;
   return Math.max(fileTreeVirtualWidth.value, MIN_FILE_TREE);
@@ -82,7 +74,6 @@ const previewDisplayWidth = computed<number>(() => {
   return Math.max(previewVirtualWidth.value, MIN_PREVIEW);
 });
 
-// --- Drag start ---
 function startLeftDrag(e: MouseEvent): void {
   e.preventDefault();
   fileTreeVirtualWidth.value = fileTreeWidth.value;
@@ -103,39 +94,33 @@ function startRightDrag(e: MouseEvent): void {
   document.addEventListener("mouseup", onMouseUp);
 }
 
-// --- Mouse move ---
 function onMouseMove(e: MouseEvent): void {
   const dx = e.clientX - dragStartX.value;
   const bodyWidth = bodyRef.value?.clientWidth ?? window.innerWidth;
 
   if (dragging.value === "left") {
-    // Don't let file tree eat into editor's minimum width
     const reservedForOthers = (previewShown.value ? previewDisplayWidth.value : 0) + MIN_EDITOR;
     const maxWidth = bodyWidth - reservedForOthers;
     fileTreeVirtualWidth.value = Math.min(dragStartWidth.value + dx, maxWidth);
   } else if (dragging.value === "right") {
-    // Don't let preview eat into editor's minimum width
     const reservedForOthers = (fileTreeShown.value ? fileTreeDisplayWidth.value : 0) + MIN_EDITOR;
     const maxWidth = bodyWidth - reservedForOthers;
     previewVirtualWidth.value = Math.min(dragStartWidth.value - dx, maxWidth);
   }
 }
 
-// --- Mouse up: commit final state ---
 function onMouseUp(): void {
   if (dragging.value === "left") {
-    if (fileTreeShown.value) {
-      fileTreeWidth.value = fileTreeDisplayWidth.value;
-      settingsStore.update("fileTreeVisible", true);
-    } else {
-      settingsStore.update("fileTreeVisible", false);
+    const nowVisible = fileTreeShown.value;
+    if (nowVisible) fileTreeWidth.value = fileTreeDisplayWidth.value;
+    if (nowVisible !== settingsStore.settings.fileTreeVisible) {
+      settingsStore.update("fileTreeVisible", nowVisible);
     }
   } else if (dragging.value === "right") {
-    if (previewShown.value) {
-      previewWidth.value = previewDisplayWidth.value;
-      settingsStore.update("previewVisible", true);
-    } else {
-      settingsStore.update("previewVisible", false);
+    const nowVisible = previewShown.value;
+    if (nowVisible) previewWidth.value = previewDisplayWidth.value;
+    if (nowVisible !== settingsStore.settings.previewVisible) {
+      settingsStore.update("previewVisible", nowVisible);
     }
   }
 
@@ -144,11 +129,20 @@ function onMouseUp(): void {
   document.removeEventListener("mouseup", onMouseUp);
 }
 
-// Apply col-resize cursor and suppress text selection during drag
 watch(dragging, (val) => {
   document.body.style.cursor = val ? "col-resize" : "";
   (document.body.style as CSSStyleDeclaration & { userSelect: string }).userSelect = val ? "none" : "";
 });
+
+// Stop the realtime watcher when preview mode switches to manual
+watch(
+  () => settingsStore.settings.previewMode,
+  async (newMode) => {
+    if (newMode === "manual") {
+      await stopWatcher();
+    }
+  }
+);
 
 onUnmounted(async () => {
   document.removeEventListener("mousemove", onMouseMove);
@@ -160,15 +154,13 @@ onUnmounted(async () => {
 
 onMounted(async () => {
   await settingsStore.load();
-  await loadThemes();
-  await templateStore.loadTemplates();
+  await Promise.all([loadThemes(), templateStore.loadTemplates()]);
 
   if (settingsStore.settings.lastOpenedPath) {
     const path = settingsStore.settings.lastOpenedPath;
     const fileTreeStore = useFileTreeStore();
     await fileTreeStore.loadDirectory(path);
     if (fileTreeStore.error) {
-      // Saved path is no longer valid (or was a file path from an old bug); clear it
       fileTreeStore.error = null;
       settingsStore.settings.lastOpenedPath = null;
       await settingsStore.save();
@@ -178,15 +170,6 @@ onMounted(async () => {
   window.addEventListener("zenypst:new-file", () => {
     templatePickerDialog.value = true;
   });
-
-  watch(
-    () => settingsStore.settings.previewMode,
-    async (newMode) => {
-      if (newMode === "manual") {
-        await stopWatcher();
-      }
-    }
-  );
 });
 
 async function handleTemplateSelected(template: Template): Promise<void> {
@@ -197,36 +180,32 @@ async function handleOpenFile(path: string): Promise<void> {
   await fileOps.openFile(path);
 }
 
-// Toolbar show-panel actions (only re-show; hiding is via drag)
 async function toggleFileTree(): Promise<void> {
   if (!settingsStore.settings.fileTreeVisible) {
     fileTreeVirtualWidth.value = Math.max(fileTreeWidth.value, MIN_FILE_TREE);
-    fileTreeWidth.value = fileTreeVirtualWidth.value;
     await settingsStore.update("fileTreeVisible", true);
+  } else {
+    await settingsStore.update("fileTreeVisible", false);
   }
 }
 
 async function togglePreview(): Promise<void> {
   if (!settingsStore.settings.previewVisible) {
     previewVirtualWidth.value = Math.max(previewWidth.value, MIN_PREVIEW);
-    previewWidth.value = previewVirtualWidth.value;
     await settingsStore.update("previewVisible", true);
+  } else {
+    await settingsStore.update("previewVisible", false);
   }
 }
 </script>
 
 <template>
   <div class="app-shell d-flex flex-column fill-height">
-    <!-- Toolbar -->
     <Toolbar
       @new-file="templatePickerDialog = true"
-      @open-settings="settingsDialog = true"
       @open-templates="templateManagerDialog = true"
-      @toggle-file-tree="toggleFileTree"
-      @toggle-preview="togglePreview"
     />
 
-    <!-- Typst not found banner -->
     <div
       v-if="typstNotFoundBar"
       class="typst-not-found-bar d-flex align-center px-3"
@@ -244,11 +223,17 @@ async function togglePreview(): Promise<void> {
       </v-btn>
     </div>
 
-    <!-- Main 3-panel body -->
     <div class="app-body" ref="bodyRef">
-      <!-- File tree panel:
-           Stays in the DOM while dragging (so the splitter tracks the cursor),
-           but the FileTree content is hidden via v-show when below the threshold. -->
+      <ActivityBar
+        :file-tree-visible="settingsStore.settings.fileTreeVisible"
+        :preview-visible="settingsStore.settings.previewVisible"
+        @toggle-file-tree="toggleFileTree"
+        @toggle-preview="togglePreview"
+        @open-settings="settingsDialog = true"
+      />
+
+      <!-- File tree panel stays in the DOM while dragging so the splitter tracks
+           the cursor, but FileTree content is hidden via v-show below the threshold. -->
       <div
         v-if="fileTreeShown || dragging === 'left'"
         class="pane pane-side"
@@ -257,15 +242,13 @@ async function togglePreview(): Promise<void> {
         <FileTree v-show="fileTreeShown" @open-file="handleOpenFile" />
       </div>
 
-      <!-- Left splitter -->
       <div
         v-if="fileTreeShown || dragging === 'left'"
-        class="splitter"
+        class="splitter splitter--left"
         :class="{ 'splitter--active': dragging === 'left' }"
         @mousedown="startLeftDrag"
       />
 
-      <!-- Editor panel (flex: 1, takes remaining space) -->
       <div class="pane pane-editor">
         <EditorPanel
           @new-file="templatePickerDialog = true"
@@ -273,15 +256,13 @@ async function togglePreview(): Promise<void> {
         />
       </div>
 
-      <!-- Right splitter -->
       <div
         v-if="previewShown || dragging === 'right'"
-        class="splitter"
+        class="splitter splitter--right"
         :class="{ 'splitter--active': dragging === 'right' }"
         @mousedown="startRightDrag"
       />
 
-      <!-- Preview panel -->
       <div
         v-if="previewShown || dragging === 'right'"
         class="pane pane-side"
@@ -291,10 +272,8 @@ async function togglePreview(): Promise<void> {
       </div>
     </div>
 
-    <!-- Status bar -->
     <StatusBar />
 
-    <!-- Dialogs -->
     <SettingsDialog v-model="settingsDialog" />
 
     <TemplatePickerDialog
@@ -342,30 +321,52 @@ async function togglePreview(): Promise<void> {
   overflow: hidden;
 }
 
-/* Side panels have fixed pixel widths */
 .pane-side {
   flex-shrink: 0;
 }
 
-/* Editor fills remaining space */
 .pane-editor {
   flex: 1;
   min-width: 0;
 }
 
-/* Divider between panels */
 .splitter {
   width: var(--splitter-width);
   flex-shrink: 0;
   cursor: col-resize;
-  background: rgba(var(--v-border-color), var(--v-border-opacity));
-  transition: background 0.1s;
+  background: rgb(var(--v-theme-surface));
+  position: relative;
   z-index: 10;
 }
 
-.splitter:hover,
-.splitter--active {
-  background: rgb(var(--v-theme-primary));
+/* Horizontal connecting line at panel header bottom — bridges the gap between panel borders */
+.splitter::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--panel-header-height) - 1px);
+  height: 1px;
+  background: rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+/* Vertical separator line */
+.splitter::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  background: rgba(var(--v-border-color), var(--v-border-opacity));
+  transition: width 0.15s, background 0.15s;
+}
+
+.splitter:hover::after,
+.splitter--active::after {
+  width: 3px;
+  background: rgba(var(--v-theme-on-surface), 0.4);
 }
 
 .typst-not-found-bar {

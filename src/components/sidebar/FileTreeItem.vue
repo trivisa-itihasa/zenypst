@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
+import { useContextMenu } from "@/composables/useContextMenu";
+import { ensureTypExtension } from "@/utils/path";
 import TemplatePickerDialog from "@/components/template/TemplatePickerDialog.vue";
 import type { FileNode, Template } from "@/types";
 
@@ -12,9 +14,7 @@ const emit = defineEmits<{ (e: "open-file", path: string): void }>();
 const fileTreeStore = useFileTreeStore();
 const fileOps = useFileOps();
 
-const contextMenu = ref(false);
-const contextMenuX = ref(0);
-const contextMenuY = ref(0);
+const ctxMenu = useContextMenu();
 const deleteDialog = ref(false);
 const newFileDialog = ref(false);
 const newFileValue = ref("");
@@ -45,7 +45,7 @@ const fileIcon = computed(() => {
 });
 
 const fileIconColor = computed(() => {
-  if (props.node.isDir) return "warning";
+  if (props.node.isDir) return "medium-emphasis";
   const ext = props.node.extension;
   if (ext === "typ") return "primary";
   if (ext === "pdf") return "error";
@@ -61,29 +61,6 @@ function handleClick(): void {
   }
 }
 
-const CLOSE_CONTEXT_MENUS_EVENT = "zenypst:close-context-menus";
-
-onMounted(() => {
-  document.addEventListener(CLOSE_CONTEXT_MENUS_EVENT, closeContextMenu);
-});
-onUnmounted(() => {
-  document.removeEventListener(CLOSE_CONTEXT_MENUS_EVENT, closeContextMenu);
-});
-
-function closeContextMenu(): void {
-  contextMenu.value = false;
-}
-
-function showContextMenu(event: MouseEvent): void {
-  event.preventDefault();
-  event.stopPropagation();
-  document.dispatchEvent(new Event(CLOSE_CONTEXT_MENUS_EVENT));
-  contextMenuX.value = event.clientX;
-  contextMenuY.value = event.clientY;
-  setTimeout(() => {
-    contextMenu.value = true;
-  }, 0);
-}
 
 // Inline rename
 function startInlineRename(event: MouseEvent): void {
@@ -138,9 +115,9 @@ function handleNewFileTemplateSelected(template: Template): void {
 }
 
 async function confirmNewFile(): Promise<void> {
-  let name = newFileValue.value.trim();
-  if (!name) { newFileDialog.value = false; return; }
-  if (!name.includes(".")) name += ".typ";
+  const raw = newFileValue.value.trim();
+  if (!raw) { newFileDialog.value = false; return; }
+  const name = ensureTypExtension(raw);
   const path = `${props.node.path}/${name}`;
   try {
     await fileOps.createFileOnDisk(path, newFileTemplate.value?.content ?? "");
@@ -183,7 +160,7 @@ async function confirmNewFolder(): Promise<void> {
       :style="{ '--depth': itemDepth }"
       @click="handleClick"
       @dblclick.stop.prevent="startInlineRename"
-      @contextmenu="showContextMenu"
+      @contextmenu="ctxMenu.show"
     >
       <!-- Expand arrow for directories -->
       <v-icon
@@ -228,8 +205,8 @@ async function confirmNewFolder(): Promise<void> {
 
     <!-- Context menu: folders only show New File / New Folder -->
     <v-menu
-      v-model="contextMenu"
-      :style="{ left: `${contextMenuX}px`, top: `${contextMenuY}px` }"
+      v-model="ctxMenu.visible.value"
+      :style="{ left: `${ctxMenu.x.value}px`, top: `${ctxMenu.y.value}px` }"
     >
       <v-list density="compact">
         <template v-if="node.isDir">

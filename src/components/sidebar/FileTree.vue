@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref } from "vue";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
+import { useContextMenu } from "@/composables/useContextMenu";
+import { ensureTypExtension } from "@/utils/path";
 import FileTreeItem from "./FileTreeItem.vue";
 
 const emit = defineEmits<{ (e: "open-file", path: string): void }>();
@@ -9,17 +11,11 @@ const emit = defineEmits<{ (e: "open-file", path: string): void }>();
 const fileTreeStore = useFileTreeStore();
 const fileOps = useFileOps();
 
-const contextMenu = ref(false);
-const contextMenuX = ref(0);
-const contextMenuY = ref(0);
+const ctxMenu = useContextMenu();
 const newFileDialog = ref(false);
 const newFileValue = ref("");
 const newFolderDialog = ref(false);
 const newFolderValue = ref("");
-
-function closeContextMenu(): void { contextMenu.value = false; }
-onMounted(() => { document.addEventListener("zenypst:close-context-menus", closeContextMenu); });
-onUnmounted(() => { document.removeEventListener("zenypst:close-context-menus", closeContextMenu); });
 
 async function openFolder(): Promise<void> {
   await fileOps.openFolderDialog();
@@ -35,13 +31,7 @@ function getRootName(path: string): string {
 
 function showRootContextMenu(event: MouseEvent): void {
   if (!fileTreeStore.rootPath) return;
-  event.preventDefault();
-  document.dispatchEvent(new Event("zenypst:close-context-menus"));
-  contextMenuX.value = event.clientX;
-  contextMenuY.value = event.clientY;
-  setTimeout(() => {
-    contextMenu.value = true;
-  }, 0);
+  ctxMenu.show(event);
 }
 
 function startNewFile(): void {
@@ -50,9 +40,9 @@ function startNewFile(): void {
 }
 
 async function confirmNewFile(): Promise<void> {
-  let name = newFileValue.value.trim();
-  if (!name || !fileTreeStore.rootPath) { newFileDialog.value = false; return; }
-  if (!name.includes(".")) name += ".typ";
+  const raw = newFileValue.value.trim();
+  if (!raw || !fileTreeStore.rootPath) { newFileDialog.value = false; return; }
+  const name = ensureTypExtension(raw);
   try {
     await fileOps.createFileOnDisk(`${fileTreeStore.rootPath}/${name}`, "");
   } catch (err) {
@@ -95,8 +85,6 @@ async function confirmNewFolder(): Promise<void> {
         <v-icon size="14">mdi-folder-open-outline</v-icon>
       </v-btn>
     </div>
-
-    <v-divider />
 
     <!-- Tree content — right-click on empty space triggers root context menu -->
     <div class="file-tree-content py-1" @contextmenu.self.prevent="showRootContextMenu">
@@ -143,8 +131,8 @@ async function confirmNewFolder(): Promise<void> {
 
     <!-- Root-level context menu (empty space) -->
     <v-menu
-      v-model="contextMenu"
-      :style="{ left: `${contextMenuX}px`, top: `${contextMenuY}px` }"
+      v-model="ctxMenu.visible.value"
+      :style="{ left: `${ctxMenu.x.value}px`, top: `${ctxMenu.y.value}px` }"
     >
       <v-list density="compact">
         <v-list-item
@@ -216,6 +204,7 @@ async function confirmNewFolder(): Promise<void> {
   height: var(--panel-header-height);
   min-height: var(--panel-header-height);
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
 .file-tree-content {

@@ -214,7 +214,7 @@ watch(scale, (s) => {
         class="compile-btn"
         @click="triggerCompile"
       >
-        <v-icon size="14">mdi-play</v-icon>
+        <v-icon>mdi-play</v-icon>
       </v-btn>
     </div>
 
@@ -224,11 +224,10 @@ watch(scale, (s) => {
     <!-- Empty state -->
     <div
       v-if="!previewStore.pdf && previewStore.status !== 'compiling'"
-      class="pdf-empty d-flex flex-column align-center justify-center fill-height"
-      style="position: absolute; inset: var(--panel-header-height) 0 0 0; pointer-events: none;"
+      class="pdf-empty"
     >
       <v-icon size="64" color="medium-emphasis">mdi-file-pdf-box</v-icon>
-      <p class="text-medium-emphasis mt-4 text-caption">PDF preview will appear here</p>
+      <p class="text-medium-emphasis mt-4">PDF preview will appear here</p>
     </div>
 
     <!-- Compile Status Overlay -->
@@ -257,11 +256,15 @@ watch(scale, (s) => {
 .compile-btn {
   border-radius: 4px !important;
   min-width: 0 !important;
-  width: 18px !important;
-  height: 18px !important;
+  width: calc(var(--panel-header-height) - 8px) !important;
+  height: calc(var(--panel-header-height) - 8px) !important;
   padding: 0 !important;
-  margin-top: 2px !important;
-  margin-bottom: 2px !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+}
+
+.compile-btn :deep(.v-icon) {
+  font-size: calc(var(--panel-header-height) - 16px) !important;
 }
 
 .pdf-pages {
@@ -281,6 +284,16 @@ watch(scale, (s) => {
 }
 .pdf-pages::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.pdf-empty {
+  position: absolute;
+  inset: var(--panel-header-height) 0 0 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 </style>
 

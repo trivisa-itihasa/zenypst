@@ -63,7 +63,13 @@
       "Bash(head -20 grep -rn \"export.*renderTextLayer\\\\|export.*TextLayer\" /home/gecko/project/zenypst/node_modules/pdfjs-dist/ --include=*.mts)",
       "Bash(grep:*)",
       "Bash(ls src/*.d.ts)",
-      "Bash(ls *.d.ts)"
+      "Bash(ls *.d.ts)",
+      "Read(//mnt/c/Users/admin/Downloads/**)",
+      "Bash(pip3 install:*)",
+      "Bash(pip install:*)",
+      "Bash(npx @tauri-apps/cli icon --help)",
+      "Bash(npx @tauri-apps/cli icon /mnt/c/Users/admin/Downloads/icon.svg --output src-tauri/icons)",
+      "Bash(cat:*)"
     ]
   }
 }

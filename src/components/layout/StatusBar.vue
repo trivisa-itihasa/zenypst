@@ -45,7 +45,7 @@ const previewModeLabel = computed(() => {
 <template>
   <div class="status-bar d-flex align-center px-3 text-caption">
     <!-- File path -->
-    <span class="text-medium-emphasis text-truncate" style="max-width: 40%;">
+    <span class="status-bar__file text-medium-emphasis text-truncate">
       {{ currentFile || "No file open" }}
     </span>
 
@@ -78,15 +78,15 @@ const previewModeLabel = computed(() => {
 .status-bar {
   height: var(--statusbar-height);
   min-height: var(--statusbar-height);
-  background: rgb(var(--v-theme-primary));
-  color: rgb(var(--v-theme-on-primary));
+  background: #239dad;
+  color: #ffffff;
   font-size: var(--ui-font-size-xs);
   flex-shrink: 0;
   overflow: hidden;
 }
 
 .status-bar .text-medium-emphasis {
-  color: rgba(var(--v-theme-on-primary), 0.7) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 
 .status-bar .text-success {
@@ -94,7 +94,11 @@ const previewModeLabel = computed(() => {
 }
 
 .status-bar .text-error {
-  color: #f38ba8 !important;
+  color: #ffffff !important;
+}
+
+.status-bar__file {
+  max-width: 40%;
 }
 
 .status-bar .text-info {

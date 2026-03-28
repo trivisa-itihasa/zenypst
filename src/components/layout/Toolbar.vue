@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import appIconUrl from "@/assets/icons/icon-str.svg";
 import { useFileOps } from "@/composables/useFileOps";
 import { useCompiler } from "@/composables/useCompiler";
 import { useSettingsStore } from "@/stores/settings";
 import { useEditorStore } from "@/stores/editor";
+import { getDirectory } from "@/utils/path";
 
 const emit = defineEmits<{
   (e: "new-file"): void;
-  (e: "open-settings"): void;
   (e: "open-templates"): void;
-  (e: "toggle-file-tree"): void;
-  (e: "toggle-preview"): void;
 }>();
 
 const fileOps = useFileOps();
@@ -19,15 +19,31 @@ const { triggerCompile, exportPdf } = useCompiler();
 const settingsStore = useSettingsStore();
 const editorStore = useEditorStore();
 
-// Menu state
-const fileMenu = ref(false);
-const editMenu = ref(false);
-const viewMenu = ref(false);
+const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const appWindow = isTauri ? getCurrentWindow() : null;
+const isMaximized = ref(false);
 
-// About dialog
+onMounted(async () => {
+  if (!appWindow) return;
+  isMaximized.value = await appWindow.isMaximized();
+});
+
+async function minimize(): Promise<void> {
+  await appWindow!.minimize();
+}
+
+async function toggleMaximize(): Promise<void> {
+  await appWindow!.toggleMaximize();
+  isMaximized.value = !isMaximized.value;
+}
+
+async function closeWindow(): Promise<void> {
+  await appWindow!.close();
+}
+
 const aboutDialog = ref(false);
+const fileMenu = ref(false);
 
-// Snackbar
 const snackbar = ref(false);
 const snackbarText = ref("");
 const snackbarColor = ref("error");
@@ -88,27 +104,15 @@ async function handleExportPdf(): Promise<void> {
     showSnackbar("Export failed: " + String(err), "error");
   }
 }
-
-function getDirectory(filePath: string): string {
-  const sep = filePath.includes("/") ? "/" : "\\";
-  const parts = filePath.split(sep);
-  parts.pop();
-  return parts.join(sep) || "/";
-}
 </script>
 
 <template>
-  <div class="toolbar d-flex align-center">
-    <!-- App name -->
-    <div class="app-name px-3 d-flex align-center" style="cursor: pointer;" @click="aboutDialog = true">
-      <v-icon size="18" color="primary" class="mr-2">mdi-typewriter</v-icon>
-      <span class="text-body-2 font-weight-medium">Zenypst</span>
-    </div>
+  <div class="toolbar d-flex align-center" data-tauri-drag-region>
+    <button class="icon-btn" @click="aboutDialog = true" title="About Zenypst">
+      <img :src="appIconUrl" class="app-icon" alt="Zenypst" />
+    </button>
 
-    <v-divider vertical class="mx-1" style="height: var(--toolbar-height);" />
-
-    <!-- File menu -->
-    <v-menu v-model="fileMenu" :close-on-content-click="true">
+    <v-menu v-model="fileMenu" :close-on-content-click="true" :transition="false">
       <template #activator="{ props }">
         <v-btn variant="text" size="small" v-bind="props" class="menu-btn">File</v-btn>
       </template>
@@ -127,45 +131,25 @@ function getDirectory(filePath: string): string {
       </v-list>
     </v-menu>
 
-    <!-- View menu -->
-    <v-menu v-model="viewMenu" :close-on-content-click="true">
-      <template #activator="{ props }">
-        <v-btn variant="text" size="small" v-bind="props" class="menu-btn">View</v-btn>
-      </template>
-      <v-list density="compact">
-        <v-list-item
-          prepend-icon="mdi-file-tree"
-          title="Show File Tree"
-          :disabled="settingsStore.settings.fileTreeVisible"
-          @click="emit('toggle-file-tree')"
-        />
-        <v-list-item
-          prepend-icon="mdi-file-pdf-box"
-          title="Show Preview"
-          :disabled="settingsStore.settings.previewVisible"
-          @click="emit('toggle-preview')"
-        />
-      </v-list>
-    </v-menu>
-
-    <!-- Settings -->
-    <v-btn
-      variant="text"
-      size="small"
-      class="menu-btn"
-      @click="emit('open-settings')"
-    >
-      Settings
-    </v-btn>
-
     <v-spacer />
+
+    <template v-if="isTauri">
+      <button class="winctl-btn" @click="minimize" title="最小化">
+        <v-icon size="14">mdi-minus</v-icon>
+      </button>
+      <button class="winctl-btn" @click="toggleMaximize" :title="isMaximized ? '元のサイズに戻す' : '最大化'">
+        <v-icon size="14">{{ isMaximized ? 'mdi-window-restore' : 'mdi-window-maximize' }}</v-icon>
+      </button>
+      <button class="winctl-btn winctl-btn--close" @click="closeWindow" title="閉じる">
+        <v-icon size="14">mdi-close</v-icon>
+      </button>
+    </template>
   </div>
 
-  <!-- About dialog -->
   <v-dialog v-model="aboutDialog" max-width="400">
     <v-card>
       <v-card-title class="d-flex align-center">
-        <v-icon size="24" color="primary" class="mr-2">mdi-typewriter</v-icon>
+        <img :src="appIconUrl" class="about-icon" alt="" />
         Zenypst
       </v-card-title>
       <v-card-text>
@@ -180,7 +164,6 @@ function getDirectory(filePath: string): string {
     </v-card>
   </v-dialog>
 
-  <!-- Snackbar -->
   <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="4000" location="bottom">
     {{ snackbarText }}
     <template #actions>
@@ -198,21 +181,70 @@ function getDirectory(filePath: string): string {
   overflow: hidden;
 }
 
-.app-name {
-  font-size: var(--ui-font-size-sm);
-  min-width: 100px;
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--activity-bar-width);
+  height: var(--toolbar-height);
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.icon-btn:hover {
+  background: rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.app-icon {
+  height: 16px;
+  width: auto;
+  display: block;
+}
+
+.about-icon {
+  height: 22px;
+  width: auto;
+  margin-right: 8px;
 }
 
 .menu-btn {
-  height: calc(var(--toolbar-height) - 6px) !important;
+  height: var(--toolbar-height) !important;
   border-radius: 0 !important;
   font-size: var(--ui-font-size-sm);
   min-width: 0;
   padding: 0 10px;
-  align-self: center;
+  align-self: stretch;
 }
 
 .menu-btn:hover {
   background: rgba(var(--v-theme-on-surface), 0.08) !important;
+}
+
+.winctl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: var(--toolbar-height);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  border-radius: 0;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.winctl-btn:hover {
+  background: rgba(var(--v-theme-on-surface), 0.12);
+  color: rgba(var(--v-theme-on-surface), 1);
+}
+
+.winctl-btn--close:hover {
+  background: #e81123;
+  color: #fff;
 }
 </style>

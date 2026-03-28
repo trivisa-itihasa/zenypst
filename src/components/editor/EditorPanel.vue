@@ -150,17 +150,14 @@ onUnmounted(() => {
       ref="editorContainer"
       class="editor-container"
     />
-    <div
-      v-else
-      class="editor-empty d-flex flex-column align-center justify-center fill-height"
-    >
+    <div v-else class="editor-empty">
       <v-icon size="64" color="medium-emphasis">mdi-file-document-outline</v-icon>
       <p class="text-medium-emphasis mt-4">Open a file to start editing</p>
-      <div class="d-flex gap-2 mt-4">
-        <v-btn variant="outlined" prepend-icon="mdi-file-plus" @click="$emit('new-file')">
+      <div class="editor-empty__actions mt-4">
+        <v-btn variant="text" prepend-icon="mdi-file-plus" class="empty-action-btn" @click="$emit('new-file')">
           New File
         </v-btn>
-        <v-btn variant="outlined" prepend-icon="mdi-folder-open" @click="$emit('open-file')">
+        <v-btn variant="text" prepend-icon="mdi-folder-open" class="empty-action-btn" @click="$emit('open-file')">
           Open File
         </v-btn>
       </div>
@@ -169,6 +166,25 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.editor-empty {
+  position: absolute;
+  inset: var(--panel-header-height) 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-empty__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.empty-action-btn {
+  justify-content: flex-start !important;
+}
+
 .editor-panel {
   position: absolute;
   inset: 0;
@@ -210,7 +226,3 @@ onUnmounted(() => {
   background: rgb(var(--v-theme-background));
 }
 </style>
-
-<script lang="ts">
-export default { emits: ["new-file", "open-file"] };
-</script>
