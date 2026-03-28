@@ -226,8 +226,10 @@ watch(scale, (s) => {
       v-if="!previewStore.pdf && previewStore.status !== 'compiling'"
       class="pdf-empty"
     >
+      <div class="pdf-empty__top" />
       <v-icon size="64" color="medium-emphasis">mdi-file-pdf-box</v-icon>
       <p class="text-medium-emphasis mt-4">PDF preview will appear here</p>
+      <div class="pdf-empty__bottom" />
     </div>
 
     <!-- Compile Status Overlay -->
@@ -293,8 +295,10 @@ watch(scale, (s) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
 }
+
+.pdf-empty__top { flex: 2; }
+.pdf-empty__bottom { flex: 3; }
 </style>
 
 <!-- Text selection highlight color (global, targets dynamically created elements) -->

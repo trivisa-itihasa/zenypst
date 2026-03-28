@@ -108,9 +108,11 @@ async function handleExportPdf(): Promise<void> {
 
 <template>
   <div class="toolbar d-flex align-center" data-tauri-drag-region>
-    <button class="icon-btn" @click="aboutDialog = true" title="About Zenypst">
-      <img :src="appIconUrl" class="app-icon" alt="Zenypst" />
-    </button>
+    <div class="toolbar-logo">
+      <button class="icon-btn" @click="aboutDialog = true" title="About Zenypst">
+        <img :src="appIconUrl" class="app-icon" alt="Zenypst" />
+      </button>
+    </div>
 
     <v-menu v-model="fileMenu" :close-on-content-click="true" :transition="false">
       <template #activator="{ props }">
@@ -181,11 +183,18 @@ async function handleExportPdf(): Promise<void> {
   overflow: hidden;
 }
 
+.toolbar-logo {
+  width: var(--activity-bar-width);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--activity-bar-width);
   height: var(--toolbar-height);
   padding: 0 10px;
   border: none;

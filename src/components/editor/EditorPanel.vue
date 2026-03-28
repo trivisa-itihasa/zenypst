@@ -151,15 +151,18 @@ onUnmounted(() => {
       class="editor-container"
     />
     <div v-else class="editor-empty">
+      <div class="editor-empty__top" />
       <v-icon size="64" color="medium-emphasis">mdi-file-document-outline</v-icon>
       <p class="text-medium-emphasis mt-4">Open a file to start editing</p>
-      <div class="editor-empty__actions mt-4">
-        <v-btn variant="text" prepend-icon="mdi-file-plus" class="empty-action-btn" @click="$emit('new-file')">
-          New File
-        </v-btn>
-        <v-btn variant="text" prepend-icon="mdi-folder-open" class="empty-action-btn" @click="$emit('open-file')">
-          Open File
-        </v-btn>
+      <div class="editor-empty__bottom">
+        <div class="editor-empty__actions">
+          <v-btn variant="text" prepend-icon="mdi-file-plus" class="empty-action-btn" @click="$emit('new-file')">
+            New File
+          </v-btn>
+          <v-btn variant="text" prepend-icon="mdi-folder-open" class="empty-action-btn" @click="$emit('open-file')">
+            Open File
+          </v-btn>
+        </div>
       </div>
     </div>
   </div>
@@ -172,13 +175,29 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+}
+
+.editor-empty__top {
+  flex: 2;
+}
+
+/* Bottom spacer is position:relative so actions can be absolutely placed
+   without affecting the flex spacer calculation (icon aligns with PdfViewer) */
+.editor-empty__bottom {
+  flex: 3;
+  position: relative;
+  align-self: stretch;
 }
 
 .editor-empty__actions {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .empty-action-btn {
