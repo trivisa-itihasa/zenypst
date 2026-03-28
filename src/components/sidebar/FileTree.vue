@@ -78,11 +78,21 @@ async function confirmNewFolder(): Promise<void> {
         </template>
         <template v-else>Explorer</template>
       </span>
-      <v-btn icon size="x-small" variant="text" title="Refresh" @click="refreshTree">
-        <v-icon size="14">mdi-refresh</v-icon>
+      <v-btn icon variant="text" title="Refresh" class="header-btn" @click="refreshTree">
+        <v-icon class="header-btn-icon">mdi-refresh</v-icon>
       </v-btn>
-      <v-btn icon size="x-small" variant="text" title="Open Folder" @click="openFolder">
-        <v-icon size="14">mdi-folder-open-outline</v-icon>
+      <v-btn
+        v-if="fileTreeStore.rootPath"
+        icon
+        variant="text"
+        title="Close Folder"
+        class="header-btn"
+        @click="fileTreeStore.clearTree()"
+      >
+        <v-icon class="header-btn-icon">mdi-folder-remove-outline</v-icon>
+      </v-btn>
+      <v-btn icon variant="text" title="Open Folder" class="header-btn" @click="openFolder">
+        <v-icon class="header-btn-icon">mdi-folder-open-outline</v-icon>
       </v-btn>
     </div>
 
@@ -102,21 +112,18 @@ async function confirmNewFolder(): Promise<void> {
 
       <div
         v-if="!fileTreeStore.rootPath && !fileTreeStore.isLoading"
-        class="d-flex flex-column align-center justify-center pa-4 mt-4"
+        class="file-tree-empty d-flex flex-column align-center"
       >
-        <v-icon size="40" color="medium-emphasis">mdi-folder-outline</v-icon>
-        <p class="text-caption text-medium-emphasis mt-2 text-center">
-          Open a folder to browse files
-        </p>
-        <v-btn
-          size="small"
-          variant="outlined"
-          class="mt-3"
-          prepend-icon="mdi-folder-open"
-          @click="openFolder"
-        >
-          Open Folder
-        </v-btn>
+        <div class="file-tree-empty__top" />
+        <v-icon size="64" color="medium-emphasis">mdi-folder-outline</v-icon>
+        <p class="text-medium-emphasis mt-4">Open a folder to browse files</p>
+        <div class="file-tree-empty__bottom">
+          <div class="file-tree-empty__actions">
+            <v-btn variant="text" prepend-icon="mdi-folder-open" class="empty-action-btn" @click="openFolder">
+              Open Folder
+            </v-btn>
+          </div>
+        </div>
       </div>
 
       <v-alert
@@ -210,5 +217,48 @@ async function confirmNewFolder(): Promise<void> {
 .file-tree-content {
   flex: 1 1 0;
   overflow-y: auto;
+}
+
+.header-btn {
+  border-radius: 4px !important;
+  min-width: 0 !important;
+  width: calc(var(--panel-header-height) - 8px) !important;
+  height: calc(var(--panel-header-height) - 8px) !important;
+  padding: 0 !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+}
+
+.header-btn :deep(.v-icon) {
+  font-size: calc(var(--panel-header-height) - 16px) !important;
+}
+
+.file-tree-empty {
+  height: 100%;
+}
+
+.file-tree-empty__top {
+  flex: 2;
+}
+
+.file-tree-empty__bottom {
+  flex: 3;
+  position: relative;
+  align-self: stretch;
+}
+
+.file-tree-empty__actions {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.empty-action-btn {
+  justify-content: flex-start !important;
 }
 </style>

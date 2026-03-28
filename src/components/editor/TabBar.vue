@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { useEditorStore } from "@/stores/editor";
+import { useSettingsStore } from "@/stores/settings";
+import { useCompiler } from "@/composables/useCompiler";
 import type { FileTab } from "@/types";
 
 const editorStore = useEditorStore();
+const settingsStore = useSettingsStore();
+const { triggerCompile } = useCompiler();
 
 function selectTab(tab: FileTab): void {
   editorStore.setActiveTab(tab.id);
@@ -51,6 +55,21 @@ function getTabIcon(tab: FileTab): string {
     <div v-if="editorStore.tabs.length === 0" class="tab-placeholder px-4 text-medium-emphasis text-caption">
       No files open
     </div>
+
+    <v-spacer />
+
+    <v-btn
+      v-if="settingsStore.settings.previewMode === 'manual'"
+      size="x-small"
+      color="primary"
+      variant="tonal"
+      :disabled="!editorStore.activeTab"
+      title="Compile"
+      class="compile-btn mx-2 flex-shrink-0"
+      @click="triggerCompile"
+    >
+      <v-icon>mdi-play</v-icon>
+    </v-btn>
   </div>
 </template>
 
@@ -113,5 +132,13 @@ function getTabIcon(tab: FileTab): string {
   flex: 1;
   display: flex;
   align-items: center;
+}
+
+.compile-btn {
+  border-radius: 4px !important;
+  min-width: 0 !important;
+  width: calc(var(--panel-header-height) - 8px) !important;
+  height: calc(var(--panel-header-height) - 8px) !important;
+  padding: 0 !important;
 }
 </style>

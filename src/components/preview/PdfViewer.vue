@@ -7,16 +7,12 @@ import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { invoke } from "@tauri-apps/api/core";
 import { usePreviewStore } from "@/stores/preview";
 import { useEditorStore } from "@/stores/editor";
-import { useSettingsStore } from "@/stores/settings";
-import { useCompiler } from "@/composables/useCompiler";
 import CompileStatus from "./CompileStatus.vue";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 const previewStore = usePreviewStore();
 const editorStore = useEditorStore();
-const settingsStore = useSettingsStore();
-const { triggerCompile } = useCompiler();
 const pagesContainer = ref<HTMLElement | null>(null);
 const scale = ref(1.0);
 
@@ -171,7 +167,8 @@ watch(
   () => previewStore.pdf,
   (pdf) => {
     if (pdf) loadPdf(pdf);
-  }
+  },
+  { immediate: true }
 );
 
 watch(scale, (s) => {
@@ -204,18 +201,6 @@ watch(scale, (s) => {
         color="primary"
         class="mr-1"
       />
-      <v-btn
-        v-if="settingsStore.settings.previewMode === 'manual'"
-        size="x-small"
-        color="primary"
-        variant="tonal"
-        :disabled="!editorStore.activeTab"
-        title="Compile"
-        class="compile-btn"
-        @click="triggerCompile"
-      >
-        <v-icon>mdi-play</v-icon>
-      </v-btn>
     </div>
 
     <!-- Pages -->
@@ -255,20 +240,6 @@ watch(scale, (s) => {
   flex-shrink: 0;
 }
 
-.compile-btn {
-  border-radius: 4px !important;
-  min-width: 0 !important;
-  width: calc(var(--panel-header-height) - 8px) !important;
-  height: calc(var(--panel-header-height) - 8px) !important;
-  padding: 0 !important;
-  margin-top: 4px !important;
-  margin-bottom: 4px !important;
-}
-
-.compile-btn :deep(.v-icon) {
-  font-size: calc(var(--panel-header-height) - 16px) !important;
-}
-
 .pdf-pages {
   flex: 1 1 0;
   overflow-y: auto;
@@ -286,6 +257,10 @@ watch(scale, (s) => {
 }
 .pdf-pages::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.pdf-pages--hidden {
+  display: none;
 }
 
 .pdf-empty {

@@ -119,17 +119,31 @@ async function handleExportPdf(): Promise<void> {
         <v-btn variant="text" size="small" v-bind="props" class="menu-btn">File</v-btn>
       </template>
       <v-list density="compact">
-        <v-list-item prepend-icon="mdi-file-plus" title="New File" subtitle="Ctrl+N" @click="handleNewFile" />
+        <v-list-item prepend-icon="mdi-file-plus" @click="handleNewFile">
+          <div class="menu-item-row"><span>New File</span><span class="menu-shortcut">Ctrl+N</span></div>
+        </v-list-item>
         <v-divider />
-        <v-list-item prepend-icon="mdi-file-outline" title="Open File…" subtitle="Ctrl+O" @click="handleOpenFile" />
-        <v-list-item prepend-icon="mdi-folder-open" title="Open Folder…" subtitle="Ctrl+Shift+O" @click="handleOpenFolder" />
+        <v-list-item prepend-icon="mdi-file-outline" @click="handleOpenFile">
+          <div class="menu-item-row"><span>Open File…</span><span class="menu-shortcut">Ctrl+O</span></div>
+        </v-list-item>
+        <v-list-item prepend-icon="mdi-folder-open" @click="handleOpenFolder">
+          <div class="menu-item-row"><span>Open Folder…</span><span class="menu-shortcut">Ctrl+Shift+O</span></div>
+        </v-list-item>
         <v-divider />
-        <v-list-item prepend-icon="mdi-content-save" title="Save" subtitle="Ctrl+S" :disabled="!editorStore.activeTab" @click="handleSave" />
-        <v-list-item prepend-icon="mdi-content-save-edit" title="Save As…" :disabled="!editorStore.activeTab" @click="handleSaveAs" />
+        <v-list-item prepend-icon="mdi-content-save" :disabled="!editorStore.activeTab" @click="handleSave">
+          <div class="menu-item-row"><span>Save</span><span class="menu-shortcut">Ctrl+S</span></div>
+        </v-list-item>
+        <v-list-item prepend-icon="mdi-content-save-edit" :disabled="!editorStore.activeTab" @click="handleSaveAs">
+          <div class="menu-item-row"><span>Save As…</span></div>
+        </v-list-item>
         <v-divider />
-        <v-list-item prepend-icon="mdi-file-pdf-box" title="Export PDF…" :disabled="!editorStore.activeTab" @click="handleExportPdf" />
+        <v-list-item prepend-icon="mdi-file-pdf-box" :disabled="!editorStore.activeTab" @click="handleExportPdf">
+          <div class="menu-item-row"><span>Export PDF…</span></div>
+        </v-list-item>
         <v-divider />
-        <v-list-item prepend-icon="mdi-file-document-multiple" title="Manage Templates" @click="emit('open-templates')" />
+        <v-list-item prepend-icon="mdi-file-document-multiple" @click="emit('open-templates')">
+          <div class="menu-item-row"><span>Manage Templates</span></div>
+        </v-list-item>
       </v-list>
     </v-menu>
 
@@ -230,6 +244,38 @@ async function handleExportPdf(): Promise<void> {
 
 .menu-btn:hover {
   background: rgba(var(--v-theme-on-surface), 0.08) !important;
+}
+
+:deep(.v-list-item__prepend) {
+  margin-inline-end: -16px;
+}
+
+:deep(.v-list-item) {
+  min-height: 28px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  padding-inline-start: 8px !important;
+}
+
+:deep(.v-list) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.menu-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  font-size: var(--ui-font-size-sm);
+}
+
+.menu-shortcut {
+  color: rgba(var(--v-theme-on-surface), 0.45);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  margin-left: auto;
 }
 
 .winctl-btn {

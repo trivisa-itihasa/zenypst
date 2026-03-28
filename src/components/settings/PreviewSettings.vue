@@ -8,7 +8,7 @@ const PREVIEW_MODES: { value: AppSettings["previewMode"]; label: string; descrip
   {
     value: "realtime",
     label: "Real-time",
-    description: "Compile automatically as you type (debounced)",
+    description: "Compile automatically as you type",
   },
   {
     value: "on_save",
@@ -71,14 +71,21 @@ async function updateDebounce(value: number): Promise<void> {
 </template>
 
 <style scoped>
+:deep(.mode-radio) {
+  margin-bottom: 10px;
+}
+
 :deep(.mode-radio .v-selection-control) {
   align-items: flex-start;
 }
 :deep(.mode-radio .v-selection-control__wrapper) {
-  margin-top: 2px;
+  margin-top: 4px;
+  align-self: flex-start;
 }
 .debounce-wrap {
-  padding-left: 40px;
   padding-bottom: 8px;
+  margin-top: 0;
+  padding-left: 24px;
+  width: 160px;
 }
 </style>

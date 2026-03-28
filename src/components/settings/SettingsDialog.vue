@@ -118,3 +118,9 @@ async function toggleColorScheme(): Promise<void> {
     </v-card>
   </v-dialog>
 </template>
+
+<style scoped>
+:deep(.v-list-item__prepend) {
+  margin-inline-end: -12px;
+}
+</style>

@@ -165,13 +165,13 @@ async function confirmNewFolder(): Promise<void> {
       <!-- Expand arrow for directories -->
       <v-icon
         v-if="node.isDir"
-        size="16"
+        size="14"
         class="mr-1"
         :icon="fileTreeStore.isExpanded(node.path) ? 'mdi-chevron-down' : 'mdi-chevron-right'"
       />
       <span v-else class="mr-1" style="width: var(--tree-indent); display: inline-block;" />
 
-      <v-icon size="16" :icon="fileIcon" :color="fileIconColor" class="mr-2" />
+      <v-icon size="14" :icon="fileIcon" :color="fileIconColor" class="mr-1" />
 
       <!-- Inline rename input or static label -->
       <input
@@ -332,7 +332,7 @@ async function confirmNewFolder(): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--ui-font-size);
+  font-size: var(--ui-font-size-sm);
 }
 
 .file-name-input {
@@ -340,7 +340,7 @@ async function confirmNewFolder(): Promise<void> {
   border: 1px solid rgb(var(--v-theme-primary));
   border-radius: 2px;
   color: inherit;
-  font-size: var(--ui-font-size);
+  font-size: var(--ui-font-size-sm);
   font-family: inherit;
   padding: 0 3px;
   outline: none;
