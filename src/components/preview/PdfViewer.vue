@@ -7,12 +7,16 @@ import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { invoke } from "@tauri-apps/api/core";
 import { usePreviewStore } from "@/stores/preview";
 import { useEditorStore } from "@/stores/editor";
+import { useSettingsStore } from "@/stores/settings";
+import { useCompiler } from "@/composables/useCompiler";
 import CompileStatus from "./CompileStatus.vue";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 const previewStore = usePreviewStore();
 const editorStore = useEditorStore();
+const settingsStore = useSettingsStore();
+const { triggerCompile } = useCompiler();
 const pagesContainer = ref<HTMLElement | null>(null);
 const scale = ref(1.0);
 
@@ -183,7 +187,7 @@ watch(scale, (s) => {
 <template>
   <div class="pdf-viewer">
     <!-- Toolbar -->
-    <div class="pdf-toolbar d-flex align-center px-2 py-1" style="min-height: var(--panel-header-height);">
+    <div class="pdf-toolbar d-flex align-center px-2">
       <v-btn icon size="x-small" variant="text" @click="scale = Math.max(0.25, Math.round((scale - 0.25) * 10) / 10)">
         <v-icon>mdi-magnify-minus-outline</v-icon>
       </v-btn>
@@ -198,7 +202,20 @@ watch(scale, (s) => {
         size="16"
         width="2"
         color="primary"
+        class="mr-1"
       />
+      <v-btn
+        v-if="settingsStore.settings.previewMode === 'manual'"
+        size="x-small"
+        color="primary"
+        variant="tonal"
+        :disabled="!editorStore.activeTab"
+        title="Compile"
+        class="compile-btn"
+        @click="triggerCompile"
+      >
+        <v-icon size="14">mdi-play</v-icon>
+      </v-btn>
     </div>
 
     <!-- Pages -->
@@ -230,9 +247,21 @@ watch(scale, (s) => {
 }
 
 .pdf-toolbar {
+  height: var(--panel-header-height);
+  min-height: var(--panel-header-height);
   background: rgb(var(--v-theme-surface));
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   flex-shrink: 0;
+}
+
+.compile-btn {
+  border-radius: 4px !important;
+  min-width: 0 !important;
+  width: 18px !important;
+  height: 18px !important;
+  padding: 0 !important;
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
 }
 
 .pdf-pages {

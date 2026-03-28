@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
-import type { FileNode } from "@/types";
+import TemplatePickerDialog from "@/components/template/TemplatePickerDialog.vue";
+import type { FileNode, Template } from "@/types";
 
 const props = defineProps<{ node: FileNode; depth?: number }>();
 const emit = defineEmits<{ (e: "open-file", path: string): void }>();
@@ -17,6 +18,8 @@ const contextMenuY = ref(0);
 const deleteDialog = ref(false);
 const newFileDialog = ref(false);
 const newFileValue = ref("");
+const newFileTemplatePicker = ref(false);
+const newFileTemplate = ref<Template | null>(null);
 const newFolderDialog = ref(false);
 const newFolderValue = ref("");
 
@@ -58,10 +61,23 @@ function handleClick(): void {
   }
 }
 
+const CLOSE_CONTEXT_MENUS_EVENT = "zenypst:close-context-menus";
+
+onMounted(() => {
+  document.addEventListener(CLOSE_CONTEXT_MENUS_EVENT, closeContextMenu);
+});
+onUnmounted(() => {
+  document.removeEventListener(CLOSE_CONTEXT_MENUS_EVENT, closeContextMenu);
+});
+
+function closeContextMenu(): void {
+  contextMenu.value = false;
+}
+
 function showContextMenu(event: MouseEvent): void {
   event.preventDefault();
   event.stopPropagation();
-  contextMenu.value = false;
+  document.dispatchEvent(new Event(CLOSE_CONTEXT_MENUS_EVENT));
   contextMenuX.value = event.clientX;
   contextMenuY.value = event.clientY;
   setTimeout(() => {
@@ -113,7 +129,12 @@ async function openInFileManager(): Promise<void> {
 
 function startNewFile(): void {
   newFileValue.value = "";
+  newFileTemplate.value = null;
   newFileDialog.value = true;
+}
+
+function handleNewFileTemplateSelected(template: Template): void {
+  newFileTemplate.value = template;
 }
 
 async function confirmNewFile(): Promise<void> {
@@ -122,7 +143,7 @@ async function confirmNewFile(): Promise<void> {
   if (!name.includes(".")) name += ".typ";
   const path = `${props.node.path}/${name}`;
   try {
-    await fileOps.createFileOnDisk(path, "");
+    await fileOps.createFileOnDisk(path, newFileTemplate.value?.content ?? "");
     if (!fileTreeStore.isExpanded(props.node.path)) {
       fileTreeStore.toggleExpanded(props.node.path);
     }
@@ -130,6 +151,7 @@ async function confirmNewFile(): Promise<void> {
     console.error("Create file failed:", err);
   }
   newFileDialog.value = false;
+  newFileTemplate.value = null;
 }
 
 function startNewFolder(): void {
@@ -160,6 +182,7 @@ async function confirmNewFolder(): Promise<void> {
       class="file-tree-item d-flex align-center"
       :style="{ '--depth': itemDepth }"
       @click="handleClick"
+      @dblclick.stop.prevent="startInlineRename"
       @contextmenu="showContextMenu"
     >
       <!-- Expand arrow for directories -->
@@ -189,7 +212,6 @@ async function confirmNewFolder(): Promise<void> {
       <span
         v-else
         class="file-name text-body-2"
-        @dblclick.stop.prevent="startInlineRename"
       >{{ node.name }}</span>
     </div>
 
@@ -247,14 +269,34 @@ async function confirmNewFolder(): Promise<void> {
             autofocus
             @keyup.enter="confirmNewFile"
           />
+          <v-chip
+            v-if="newFileTemplate"
+            size="small"
+            prepend-icon="mdi-file-document-outline"
+            closable
+            @click:close="newFileTemplate = null"
+          >
+            {{ newFileTemplate.name }}
+          </v-chip>
         </v-card-text>
         <v-card-actions>
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-file-document-multiple-outline"
+            @click="newFileTemplatePicker = true"
+          >From Template</v-btn>
           <v-spacer />
           <v-btn @click="newFileDialog = false">Cancel</v-btn>
           <v-btn color="primary" @click="confirmNewFile">Create</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Template picker for new file -->
+    <TemplatePickerDialog
+      v-model="newFileTemplatePicker"
+      @selected="handleNewFileTemplateSelected"
+    />
 
     <!-- New Folder dialog (folder context) -->
     <v-dialog v-model="newFolderDialog" max-width="400">
@@ -295,14 +337,14 @@ async function confirmNewFolder(): Promise<void> {
 
 <style scoped>
 .file-tree-item {
-  padding-top: 2px;
-  padding-bottom: 2px;
+  height: 24px;
   padding-left: calc(var(--depth, 0) * var(--tree-indent) + 4px);
   padding-right: 8px;
   cursor: pointer;
   user-select: none;
   border-radius: 4px;
   margin: 1px 4px;
+  flex-shrink: 0;
 }
 
 .file-tree-item:hover {

@@ -11,7 +11,7 @@ import TabBar from "./TabBar.vue";
 
 const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
-const { scheduleCompile } = useCompiler();
+const { scheduleCompile, triggerCompile } = useCompiler();
 const { activeTheme } = useTheme();
 
 const editorContainer = ref<HTMLElement | null>(null);
@@ -98,10 +98,14 @@ watch(
 // Watch for active tab changes
 watch(
   activeTab,
-  async (tab) => {
+  async (tab, prevTab) => {
     await nextTick();
     if (tab) {
       mountEditor(tab.content);
+      // In realtime mode, re-compile when switching tabs so the PDF matches
+      if (prevTab !== undefined && settingsStore.settings.previewMode === "realtime") {
+        triggerCompile().catch(console.error);
+      }
     } else if (view) {
       view.destroy();
       view = null;

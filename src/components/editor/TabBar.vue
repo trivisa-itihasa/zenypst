@@ -27,21 +27,21 @@ function getTabIcon(tab: FileTab): string {
     <div
       v-for="tab in editorStore.tabs"
       :key="tab.id"
-      class="tab-item d-flex align-center px-3"
+      class="tab-item d-flex align-center px-2"
       :class="{ 'tab-item--active': tab.id === editorStore.activeTabId }"
       @click="selectTab(tab)"
     >
-      <v-icon size="14" class="mr-1" :icon="getTabIcon(tab)" />
-      <span class="tab-name text-truncate">
+      <v-icon size="14" class="mr-1 flex-shrink-0" :icon="getTabIcon(tab)" />
+      <span class="tab-name">
         {{ tab.name }}
       </span>
-      <span v-if="tab.isDirty" class="tab-dirty ml-1">●</span>
+      <span v-if="tab.isDirty" class="tab-dirty ml-1 flex-shrink-0">●</span>
       <v-btn
         icon
         density="compact"
         size="x-small"
         variant="text"
-        class="tab-close ml-1"
+        class="tab-close ml-auto flex-shrink-0"
         @click.stop="closeTab($event, tab)"
       >
         <v-icon size="12">mdi-close</v-icon>
@@ -56,8 +56,8 @@ function getTabIcon(tab: FileTab): string {
 
 <style scoped>
 .tab-bar {
-  height: var(--tabbar-height);
-  min-height: var(--tabbar-height);
+  height: var(--panel-header-height);
+  min-height: var(--panel-header-height);
   background: rgb(var(--v-theme-surface));
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   gap: 0;
@@ -66,15 +66,14 @@ function getTabIcon(tab: FileTab): string {
 
 .tab-item {
   height: 100%;
-  min-width: 120px;
-  max-width: 200px;
+  width: 160px;
+  flex-shrink: 0;
   cursor: pointer;
   border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   user-select: none;
   font-size: var(--ui-font-size-sm);
   color: rgba(var(--v-theme-on-surface), 0.6);
   transition: background 0.1s;
-  flex-shrink: 0;
 }
 
 .tab-item:hover {
@@ -88,7 +87,8 @@ function getTabIcon(tab: FileTab): string {
 }
 
 .tab-name {
-  max-width: 120px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

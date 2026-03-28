@@ -89,10 +89,6 @@ async function handleExportPdf(): Promise<void> {
   }
 }
 
-async function handleCompile(): Promise<void> {
-  await triggerCompile();
-}
-
 function getDirectory(filePath: string): string {
   const sep = filePath.includes("/") ? "/" : "\\";
   const parts = filePath.split(sep);
@@ -163,20 +159,6 @@ function getDirectory(filePath: string): string {
     </v-btn>
 
     <v-spacer />
-
-    <!-- Compile button (for manual / quick access) -->
-    <v-btn
-      v-if="settingsStore.settings.previewMode === 'manual'"
-      size="small"
-      color="primary"
-      variant="tonal"
-      prepend-icon="mdi-play"
-      class="mr-2"
-      :disabled="!editorStore.activeTab"
-      @click="handleCompile"
-    >
-      Compile
-    </v-btn>
   </div>
 
   <!-- About dialog -->

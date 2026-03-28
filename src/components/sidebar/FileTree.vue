@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
 import FileTreeItem from "./FileTreeItem.vue";
@@ -17,6 +17,10 @@ const newFileValue = ref("");
 const newFolderDialog = ref(false);
 const newFolderValue = ref("");
 
+function closeContextMenu(): void { contextMenu.value = false; }
+onMounted(() => { document.addEventListener("zenypst:close-context-menus", closeContextMenu); });
+onUnmounted(() => { document.removeEventListener("zenypst:close-context-menus", closeContextMenu); });
+
 async function openFolder(): Promise<void> {
   await fileOps.openFolderDialog();
 }
@@ -32,7 +36,7 @@ function getRootName(path: string): string {
 function showRootContextMenu(event: MouseEvent): void {
   if (!fileTreeStore.rootPath) return;
   event.preventDefault();
-  contextMenu.value = false;
+  document.dispatchEvent(new Event("zenypst:close-context-menus"));
   contextMenuX.value = event.clientX;
   contextMenuY.value = event.clientY;
   setTimeout(() => {
@@ -77,7 +81,7 @@ async function confirmNewFolder(): Promise<void> {
 <template>
   <div class="file-tree">
     <!-- Header -->
-    <div class="file-tree-header d-flex align-center px-3 py-1">
+    <div class="file-tree-header d-flex align-center px-3">
       <span class="text-caption text-uppercase font-weight-medium tracking-widest flex-grow-1">
         <template v-if="fileTreeStore.rootPath">
           {{ getRootName(fileTreeStore.rootPath) }}
@@ -209,6 +213,7 @@ async function confirmNewFolder(): Promise<void> {
 }
 
 .file-tree-header {
+  height: var(--panel-header-height);
   min-height: var(--panel-header-height);
   flex-shrink: 0;
 }
