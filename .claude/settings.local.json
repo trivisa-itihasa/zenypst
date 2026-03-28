@@ -69,7 +69,9 @@
       "Bash(pip install:*)",
       "Bash(npx @tauri-apps/cli icon --help)",
       "Bash(npx @tauri-apps/cli icon /mnt/c/Users/admin/Downloads/icon.svg --output src-tauri/icons)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(find /home/gecko/project/zenypst/src-tauri -name *.wxs -o -name *.nsi -o -name *.wix)",
+      "Bash(npx tauri:*)"
     ]
   }
 }
