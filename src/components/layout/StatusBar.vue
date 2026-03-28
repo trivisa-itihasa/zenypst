@@ -76,11 +76,11 @@ const previewModeLabel = computed(() => {
 
 <style scoped>
 .status-bar {
-  height: 24px;
-  min-height: 24px;
+  height: var(--statusbar-height);
+  min-height: var(--statusbar-height);
   background: rgb(var(--v-theme-primary));
   color: rgb(var(--v-theme-on-primary));
-  font-size: 11px;
+  font-size: var(--ui-font-size-xs);
   flex-shrink: 0;
   overflow: hidden;
 }

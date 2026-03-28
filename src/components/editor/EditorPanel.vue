@@ -191,12 +191,12 @@ onUnmounted(() => {
 }
 
 .editor-container :deep(.cm-scroller::-webkit-scrollbar) {
-  width: 6px;
-  height: 6px;
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
 }
 .editor-container :deep(.cm-scroller::-webkit-scrollbar-thumb) {
   background: rgba(var(--v-border-color), 0.4);
-  border-radius: 3px;
+  border-radius: var(--scrollbar-radius);
 }
 .editor-container :deep(.cm-scroller::-webkit-scrollbar-track) {
   background: transparent;

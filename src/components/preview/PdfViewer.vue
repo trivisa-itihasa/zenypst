@@ -183,7 +183,7 @@ watch(scale, (s) => {
 <template>
   <div class="pdf-viewer">
     <!-- Toolbar -->
-    <div class="pdf-toolbar d-flex align-center px-2 py-1" style="min-height: 36px;">
+    <div class="pdf-toolbar d-flex align-center px-2 py-1" style="min-height: var(--panel-header-height);">
       <v-btn icon size="x-small" variant="text" @click="scale = Math.max(0.25, Math.round((scale - 0.25) * 10) / 10)">
         <v-icon>mdi-magnify-minus-outline</v-icon>
       </v-btn>
@@ -208,7 +208,7 @@ watch(scale, (s) => {
     <div
       v-if="!previewStore.pdf && previewStore.status !== 'compiling'"
       class="pdf-empty d-flex flex-column align-center justify-center fill-height"
-      style="position: absolute; inset: 36px 0 0 0; pointer-events: none;"
+      style="position: absolute; inset: var(--panel-header-height) 0 0 0; pointer-events: none;"
     >
       <v-icon size="64" color="medium-emphasis">mdi-file-pdf-box</v-icon>
       <p class="text-medium-emphasis mt-4 text-caption">PDF preview will appear here</p>
@@ -244,11 +244,11 @@ watch(scale, (s) => {
 }
 
 .pdf-pages::-webkit-scrollbar {
-  width: 6px;
+  width: var(--scrollbar-size);
 }
 .pdf-pages::-webkit-scrollbar-thumb {
   background: rgba(var(--v-border-color), 0.4);
-  border-radius: 3px;
+  border-radius: var(--scrollbar-radius);
 }
 .pdf-pages::-webkit-scrollbar-track {
   background: transparent;

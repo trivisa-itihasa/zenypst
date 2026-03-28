@@ -2,7 +2,25 @@
 @import "@fontsource/inter/latin.css";
 
 :root {
+  /* Typography */
   --ui-font-size: 13px;
+  --ui-font-size-sm: 12px;
+  --ui-font-size-xs: 11px;
+  --ui-font-size-xxs: 10px;
+
+  /* Layout heights */
+  --toolbar-height: 24px;
+  --tabbar-height: 36px;
+  --statusbar-height: 24px;
+  --panel-header-height: 36px;
+
+  /* Structural */
+  --splitter-width: 4px;
+  --scrollbar-size: 6px;
+  --scrollbar-radius: 3px;
+
+  /* Tree */
+  --tree-indent: 16px;
 }
 
 html, body, #app {
@@ -24,8 +42,8 @@ html, body, #app {
 }
 
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
 }
 
 *::-webkit-scrollbar-track {
@@ -34,7 +52,7 @@ html, body, #app {
 
 *::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+  border-radius: var(--scrollbar-radius);
 }
 
 // CodeMirror adjustments

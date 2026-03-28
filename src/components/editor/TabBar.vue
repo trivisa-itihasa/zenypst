@@ -56,8 +56,8 @@ function getTabIcon(tab: FileTab): string {
 
 <style scoped>
 .tab-bar {
-  height: 36px;
-  min-height: 36px;
+  height: var(--tabbar-height);
+  min-height: var(--tabbar-height);
   background: rgb(var(--v-theme-surface));
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   gap: 0;
@@ -71,7 +71,7 @@ function getTabIcon(tab: FileTab): string {
   cursor: pointer;
   border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   user-select: none;
-  font-size: 12px;
+  font-size: var(--ui-font-size-sm);
   color: rgba(var(--v-theme-on-surface), 0.6);
   transition: background 0.1s;
   flex-shrink: 0;
@@ -96,7 +96,7 @@ function getTabIcon(tab: FileTab): string {
 
 .tab-dirty {
   color: rgb(var(--v-theme-warning));
-  font-size: 10px;
+  font-size: var(--ui-font-size-xxs);
 }
 
 .tab-close {

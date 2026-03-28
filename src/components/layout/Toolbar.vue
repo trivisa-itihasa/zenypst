@@ -23,7 +23,6 @@ const editorStore = useEditorStore();
 const fileMenu = ref(false);
 const editMenu = ref(false);
 const viewMenu = ref(false);
-const helpMenu = ref(false);
 
 // About dialog
 const aboutDialog = ref(false);
@@ -103,14 +102,14 @@ function getDirectory(filePath: string): string {
 </script>
 
 <template>
-  <div class="toolbar d-flex align-center" style="min-height: 36px;">
+  <div class="toolbar d-flex align-center">
     <!-- App name -->
-    <div class="app-name px-3 d-flex align-center">
+    <div class="app-name px-3 d-flex align-center" style="cursor: pointer;" @click="aboutDialog = true">
       <v-icon size="18" color="primary" class="mr-2">mdi-typewriter</v-icon>
       <span class="text-body-2 font-weight-medium">Zenypst</span>
     </div>
 
-    <v-divider vertical class="mx-1" style="height: 24px;" />
+    <v-divider vertical class="mx-1" style="height: var(--toolbar-height);" />
 
     <!-- File menu -->
     <v-menu v-model="fileMenu" :close-on-content-click="true">
@@ -163,16 +162,6 @@ function getDirectory(filePath: string): string {
       Settings
     </v-btn>
 
-    <!-- Help menu -->
-    <v-menu v-model="helpMenu" :close-on-content-click="true">
-      <template #activator="{ props }">
-        <v-btn variant="text" size="small" v-bind="props" class="menu-btn">Help</v-btn>
-      </template>
-      <v-list density="compact">
-        <v-list-item prepend-icon="mdi-information" title="About Zenypst" @click="aboutDialog = true" />
-      </v-list>
-    </v-menu>
-
     <v-spacer />
 
     <!-- Compile button (for manual / quick access) -->
@@ -222,22 +211,23 @@ function getDirectory(filePath: string): string {
 .toolbar {
   background: rgb(var(--v-theme-surface));
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  height: 36px;
+  height: var(--toolbar-height);
   flex-shrink: 0;
   overflow: hidden;
 }
 
 .app-name {
-  font-size: 13px;
-  min-width: 120px;
+  font-size: var(--ui-font-size-sm);
+  min-width: 100px;
 }
 
 .menu-btn {
-  height: 36px !important;
+  height: calc(var(--toolbar-height) - 6px) !important;
   border-radius: 0 !important;
-  font-size: 13px;
+  font-size: var(--ui-font-size-sm);
   min-width: 0;
-  padding: 0 12px;
+  padding: 0 10px;
+  align-self: center;
 }
 
 .menu-btn:hover {

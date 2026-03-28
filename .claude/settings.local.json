@@ -60,7 +60,10 @@
       "Bash(head -10 grep -rn renderTextLayer /home/gecko/project/zenypst/node_modules/pdfjs-dist/ --include=*.d.ts)",
       "Bash(head -10 grep -rn renderTextLayer /home/gecko/project/zenypst/node_modules/pdfjs-dist/ --include=*.mts)",
       "Bash(grep -rn renderTextLayer /home/gecko/project/zenypst/node_modules/pdfjs-dist/ --include=*.mts)",
-      "Bash(head -20 grep -rn \"export.*renderTextLayer\\\\|export.*TextLayer\" /home/gecko/project/zenypst/node_modules/pdfjs-dist/ --include=*.mts)"
+      "Bash(head -20 grep -rn \"export.*renderTextLayer\\\\|export.*TextLayer\" /home/gecko/project/zenypst/node_modules/pdfjs-dist/ --include=*.mts)",
+      "Bash(grep:*)",
+      "Bash(ls src/*.d.ts)",
+      "Bash(ls *.d.ts)"
     ]
   }
 }
