@@ -334,23 +334,25 @@ async function togglePreview(): Promise<void> {
   width: var(--splitter-width);
   flex-shrink: 0;
   cursor: col-resize;
-  background: rgb(var(--v-theme-surface));
+  background: transparent;
   position: relative;
   z-index: 10;
 }
 
-/* Horizontal connecting line at panel header bottom — bridges the gap between panel borders */
+/* Fill header area with surface color to match adjacent panel headers,
+   and draw the connecting border line at the bottom */
 .splitter::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(var(--panel-header-height) - 1px);
-  height: 1px;
-  background: rgba(var(--v-border-color), var(--v-border-opacity));
+  top: 0;
+  height: var(--panel-header-height);
+  background: rgb(var(--v-theme-surface));
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
-/* Vertical separator line */
+/* Vertical separator line — hidden at rest, visible on hover/drag */
 .splitter::after {
   content: "";
   position: absolute;
@@ -359,7 +361,7 @@ async function togglePreview(): Promise<void> {
   left: 50%;
   transform: translateX(-50%);
   width: 1px;
-  background: rgba(var(--v-border-color), var(--v-border-opacity));
+  background: transparent;
   transition: width 0.15s, background 0.15s;
 }
 

@@ -209,12 +209,14 @@ async function handleExportPdf(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: var(--toolbar-height);
-  padding: 0 10px;
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  margin: 0 6px;
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: 6px;
 }
 
 .icon-btn:hover {
@@ -234,12 +236,11 @@ async function handleExportPdf(): Promise<void> {
 }
 
 .menu-btn {
-  height: var(--toolbar-height) !important;
-  border-radius: 0 !important;
+  height: 28px !important;
+  border-radius: 6px !important;
   font-size: var(--ui-font-size-sm);
   min-width: 0;
   padding: 0 10px;
-  align-self: stretch;
 }
 
 .menu-btn:hover {

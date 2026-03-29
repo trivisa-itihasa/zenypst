@@ -72,7 +72,7 @@ async function confirmNewFolder(): Promise<void> {
   <div class="file-tree">
     <!-- Header -->
     <div class="file-tree-header d-flex align-center px-3">
-      <span class="text-caption text-uppercase font-weight-medium tracking-widest flex-grow-1">
+      <span class="text-caption text-uppercase font-weight-medium tracking-widest flex-grow-1 root-name-label">
         <template v-if="fileTreeStore.rootPath">
           {{ getRootName(fileTreeStore.rootPath) }}
         </template>
@@ -260,5 +260,12 @@ async function confirmNewFolder(): Promise<void> {
 
 .empty-action-btn {
   justify-content: flex-start !important;
+}
+
+.root-name-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 </style>

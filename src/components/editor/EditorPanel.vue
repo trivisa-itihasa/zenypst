@@ -59,6 +59,7 @@ function mountEditor(content: string): void {
     doc: content,
     themeColors: activeTheme.value.colors,
     fontFamily: settingsStore.settings.fontFamily,
+    fontFamilyFallback: settingsStore.settings.fontFamilyFallback,
     fontSize: settingsStore.settings.fontSize,
     showLineNumbers: settingsStore.settings.showLineNumbers,
     wordWrap: settingsStore.settings.wordWrap,
@@ -119,6 +120,7 @@ watch(
   [
     () => activeTheme.value.colors,
     () => settingsStore.settings.fontFamily,
+    () => settingsStore.settings.fontFamilyFallback,
     () => settingsStore.settings.fontSize,
     () => settingsStore.settings.wordWrap,
     () => settingsStore.settings.showLineNumbers,

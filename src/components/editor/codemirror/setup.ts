@@ -37,6 +37,7 @@ export interface EditorConfig {
   doc: string;
   themeColors: ThemeColors;
   fontFamily: string;
+  fontFamilyFallback: string;
   fontSize: number;
   showLineNumbers: boolean;
   wordWrap: boolean;
@@ -76,11 +77,11 @@ export function createEditorState(config: EditorConfig): EditorState {
     // Font styling via CSS
     EditorView.theme({
       ".cm-content": {
-        fontFamily: `"${config.fontFamily}", "Fira Code", "Consolas", "Liberation Mono", monospace`,
+        fontFamily: `"${config.fontFamily}", "${config.fontFamilyFallback}", monospace`,
         fontSize: `${config.fontSize}px`,
       },
       ".cm-gutters": {
-        fontFamily: `"${config.fontFamily}", "Fira Code", "Consolas", "Liberation Mono", monospace`,
+        fontFamily: `"${config.fontFamily}", "${config.fontFamilyFallback}", monospace`,
         fontSize: `${config.fontSize}px`,
       },
     }),
@@ -112,17 +113,18 @@ export function createEditorState(config: EditorConfig): EditorState {
 export function buildDynamicExtensions(
   themeColors: ThemeColors,
   fontFamily: string,
+  fontFamilyFallback: string,
   fontSize: number
 ): Extension[] {
   return [
     buildThemeExtension(themeColors),
     EditorView.theme({
       ".cm-content": {
-        fontFamily: `"${fontFamily}", "Fira Code", "Consolas", "Liberation Mono", monospace`,
+        fontFamily: `"${fontFamily}", "${fontFamilyFallback}", monospace`,
         fontSize: `${fontSize}px`,
       },
       ".cm-gutters": {
-        fontFamily: `"${fontFamily}", "Fira Code", "Consolas", "Liberation Mono", monospace`,
+        fontFamily: `"${fontFamily}", "${fontFamilyFallback}", monospace`,
         fontSize: `${fontSize}px`,
       },
     }),

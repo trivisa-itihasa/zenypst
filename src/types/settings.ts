@@ -2,6 +2,7 @@
 export interface AppSettings {
   // Editor
   fontFamily: string;
+  fontFamilyFallback: string;
   fontSize: number;
   showLineNumbers: boolean;
   wordWrap: boolean;
@@ -29,6 +30,7 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   fontFamily: "Fira Code",
+  fontFamilyFallback: "monospace",
   fontSize: 14,
   showLineNumbers: true,
   wordWrap: false,
