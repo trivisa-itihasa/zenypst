@@ -33,22 +33,37 @@ const statusColor = computed(() => {
       <div
         v-for="(err, i) in previewStore.errors"
         :key="i"
-        class="error-item mb-1"
+        class="error-item mb-2"
       >
-        <span class="text-caption text-error">
-          <template v-if="err.file">{{ err.file }}<template v-if="err.line">:{{ err.line }}</template><template v-if="err.column">:{{ err.column }}</template> — </template>
-          {{ err.message }}
-        </span>
+        <div class="text-caption text-error font-weight-medium">
+          <template v-if="err.file">{{ err.file }}<template v-if="err.line">:{{ err.line }}</template><template v-if="err.column">:{{ err.column }}</template> — </template>{{ err.message }}
+        </div>
+        <div v-if="err.sourceLine" class="source-snippet mt-1">
+          <span class="source-text">{{ err.sourceLine }}</span>
+          <br v-if="err.column" />
+          <span v-if="err.column" class="caret-line">{{ ' '.repeat(err.column - 1) }}^</span>
+        </div>
+        <div v-for="(hint, hi) in err.hints" :key="hi" class="text-caption hint-text mt-1">
+          hint: {{ hint }}
+        </div>
       </div>
       <div
         v-for="(warn, i) in previewStore.warnings"
         :key="`w${i}`"
-        class="warning-item mb-1"
+        class="warning-item mb-2"
       >
-        <span class="text-caption text-warning">
+        <div class="text-caption text-warning font-weight-medium">
           <v-icon size="12" class="mr-1">mdi-alert</v-icon>
-          {{ warn.message }}
-        </span>
+          <template v-if="warn.file">{{ warn.file }}<template v-if="warn.line">:{{ warn.line }}</template><template v-if="warn.column">:{{ warn.column }}</template> — </template>{{ warn.message }}
+        </div>
+        <div v-if="warn.sourceLine" class="source-snippet mt-1">
+          <span class="source-text">{{ warn.sourceLine }}</span>
+          <br v-if="warn.column" />
+          <span v-if="warn.column" class="caret-line">{{ ' '.repeat(warn.column - 1) }}^</span>
+        </div>
+        <div v-for="(hint, hi) in warn.hints" :key="hi" class="text-caption hint-text mt-1">
+          hint: {{ hint }}
+        </div>
       </div>
     </div>
   </div>
@@ -85,6 +100,30 @@ const statusColor = computed(() => {
 }
 
 .error-item, .warning-item {
+  font-family: monospace;
+}
+
+.source-snippet {
+  background: rgba(var(--v-theme-surface-variant), 0.5);
+  border-left: 2px solid rgb(var(--v-theme-error));
+  padding: 2px 6px;
+  font-family: monospace;
+  font-size: 11px;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.warning-item .source-snippet {
+  border-left-color: rgb(var(--v-theme-warning));
+}
+
+.caret-line {
+  color: rgb(var(--v-theme-error));
+  white-space: pre;
+}
+
+.hint-text {
+  color: rgb(var(--v-theme-info));
   font-family: monospace;
 }
 </style>

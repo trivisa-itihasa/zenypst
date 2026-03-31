@@ -22,11 +22,14 @@ export function buildThemeExtension(colors: ThemeColors): Extension {
       ".cm-cursor, .cm-dropCursor": {
         borderLeftColor: colors.caret,
       },
-      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+        backgroundColor: colors.selection,
+      },
+      "::selection": {
         backgroundColor: colors.selection,
       },
       ".cm-activeLine": {
-        backgroundColor: colors.lineHighlight,
+        backgroundColor: hexToRgba(colors.lineHighlight, 0.5),
       },
       ".cm-gutters": {
         backgroundColor: colors.gutterBackground,
@@ -103,6 +106,15 @@ export function buildThemeExtension(colors: ThemeColors): Extension {
   ]);
 
   return [baseTheme, syntaxHighlighting(highlightStyle)];
+}
+
+/** Convert a hex color string to rgba(...) with the given alpha. */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 /** Determine if a hex color is dark (for EditorView.theme dark parameter). */

@@ -8,6 +8,8 @@ pub struct AppSettings {
     // Editor
     #[serde(default = "default_font_family")]
     pub font_family: String,
+    #[serde(default = "default_font_family_fallback")]
+    pub font_family_fallback: String,
     #[serde(default = "default_font_size")]
     pub font_size: u32,
     #[serde(default = "default_true")]
@@ -51,6 +53,7 @@ pub struct AppSettings {
 }
 
 fn default_font_family() -> String { "Fira Code".to_string() }
+fn default_font_family_fallback() -> String { "monospace".to_string() }
 fn default_font_size() -> u32 { 14 }
 fn default_true() -> bool { true }
 fn default_theme_id() -> String { "zenypst-dark".to_string() }
@@ -65,6 +68,7 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             font_family: default_font_family(),
+            font_family_fallback: default_font_family_fallback(),
             font_size: default_font_size(),
             show_line_numbers: true,
             word_wrap: false,
@@ -318,6 +322,22 @@ pub async fn save_theme(mut theme: Theme) -> Result<(), String> {
     tokio::fs::write(&file_path, content)
         .await
         .map_err(|e| format!("Failed to write theme: {}", e))
+}
+
+/// List font family names installed on this system.
+#[tauri::command]
+pub async fn list_system_fonts() -> Vec<String> {
+    let mut db = fontdb::Database::new();
+    db.load_system_fonts();
+
+    let mut families: std::collections::HashSet<String> = db
+        .faces()
+        .flat_map(|face| face.families.iter().map(|(name, _lang)| name.clone()))
+        .collect();
+
+    let mut result: Vec<String> = families.drain().collect();
+    result.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    result
 }
 
 /// Delete a custom theme by ID.

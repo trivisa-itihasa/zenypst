@@ -37,8 +37,11 @@ impl NativeCompilerState {
 pub struct NativeCompileError {
     pub severity: String,
     pub message: String,
+    pub file: Option<String>,
     pub line: Option<u32>,
     pub column: Option<u32>,
+    pub source_line: Option<String>,
+    pub hints: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -76,22 +79,30 @@ fn diag_to_error(
     .to_string();
 
     let message = diag.message.to_string();
+    let hints: Vec<String> = diag.hints.iter().map(|h| h.to_string()).collect();
 
-    let (line, column) = diag
-        .span
-        .id()
-        .and_then(|id| world.source(id).ok())
-        .and_then(|src: typst::syntax::Source| {
-            let range = src.range(diag.span)?;
-            let lines = src.lines();
-            let ln = lines.byte_to_line(range.start)? as u32 + 1;
-            let col = lines.byte_to_column(range.start)? as u32 + 1;
-            Some((ln, col))
-        })
-        .map(|(l, c)| (Some(l), Some(c)))
-        .unwrap_or((None, None));
+    let mut file: Option<String> = None;
+    let mut line: Option<u32> = None;
+    let mut column: Option<u32> = None;
+    let mut source_line: Option<String> = None;
 
-    NativeCompileError { severity, message, line, column }
+    if let Some(id) = diag.span.id() {
+        file = Some(id.vpath().as_rootless_path().display().to_string());
+        if let Ok(src) = world.source(id) {
+            if let Some(range) = src.range(diag.span) {
+                let lines = src.lines();
+                if let Some(ln) = lines.byte_to_line(range.start) {
+                    line = Some(ln as u32 + 1);
+                    source_line = src.text().lines().nth(ln).map(|l| l.to_string());
+                }
+                if let Some(col) = lines.byte_to_column(range.start) {
+                    column = Some(col as u32 + 1);
+                }
+            }
+        }
+    }
+
+    NativeCompileError { severity, message, file, line, column, source_line, hints }
 }
 
 fn make_pdf_options() -> typst_pdf::PdfOptions<'static> {
@@ -218,8 +229,11 @@ fn compile_to_pdf(
                     let err = NativeCompileError {
                         severity: "error".into(),
                         message: format!("PDF generation failed: {}", msgs.join("; ")),
+                        file: None,
                         line: None,
                         column: None,
+                        source_line: None,
+                        hints: vec![],
                     };
                     (Err(vec![err]), warn_list)
                 }

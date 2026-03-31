@@ -7,7 +7,7 @@ use commands::file::{
     delete_path, rename_path, open_in_file_manager, pick_folder, pick_file, save_file_dialog,
 };
 use commands::settings::{
-    load_settings, save_settings, list_themes, save_theme, delete_theme,
+    load_settings, save_settings, list_themes, save_theme, delete_theme, list_system_fonts,
 };
 use commands::template::{list_templates, save_template, delete_template};
 use commands::native_compile::{compile_native, export_pdf, get_typst_version, locate_source, NativeCompilerState};
@@ -44,6 +44,7 @@ pub fn run() {
             // Settings commands
             load_settings,
             save_settings,
+            list_system_fonts,
             // Theme commands
             list_themes,
             save_theme,

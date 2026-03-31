@@ -54,6 +54,8 @@ export interface CompileError {
   file?: string;
   line?: number;
   column?: number;
+  sourceLine?: string;
+  hints?: string[];
 }
 
 export interface CompileResult {

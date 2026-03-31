@@ -237,7 +237,7 @@ async function togglePreview(): Promise<void> {
       <div
         v-if="fileTreeShown || dragging === 'left'"
         class="pane pane-side"
-        :style="{ width: fileTreeDisplayWidth + 'px' }"
+        :style="{ width: fileTreeDisplayWidth + 'px', pointerEvents: dragging ? 'none' : '' }"
       >
         <FileTree v-show="fileTreeShown" @open-file="handleOpenFile" />
       </div>
@@ -266,7 +266,7 @@ async function togglePreview(): Promise<void> {
       <div
         v-if="previewShown || dragging === 'right'"
         class="pane pane-side"
-        :style="{ width: previewDisplayWidth + 'px' }"
+        :style="{ width: previewDisplayWidth + 'px', pointerEvents: dragging ? 'none' : '' }"
       >
         <PdfViewer v-show="previewShown" />
       </div>

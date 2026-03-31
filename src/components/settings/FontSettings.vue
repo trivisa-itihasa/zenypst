@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useSettingsStore } from "@/stores/settings";
 
 const settingsStore = useSettingsStore();
@@ -19,59 +19,104 @@ const COMMON_FONTS = [
   "monospace",
 ];
 
+const systemFonts = ref<string[]>([]);
+
+onMounted(async () => {
+  if ("__TAURI_INTERNALS__" in window) {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const fonts = await invoke<string[]>("list_system_fonts");
+      systemFonts.value = fonts;
+    } catch (e) {
+      console.error("Failed to load system fonts:", e);
+    }
+  }
+});
+
+// Merged, deduplicated list: system fonts first, then common fonts not already present
+const allFonts = computed(() => {
+  if (systemFonts.value.length > 0) {
+    const sys = new Set(systemFonts.value.map((f) => f.toLowerCase()));
+    const extras = COMMON_FONTS.filter((f) => !sys.has(f.toLowerCase()));
+    return [...systemFonts.value, ...extras];
+  }
+  return COMMON_FONTS;
+});
+
+// Display value (selected font name shown in the text field)
 const fontInput = ref(settingsStore.settings.fontFamily);
+// Separate filter query — empty means "show all"
+const fontQuery = ref("");
 const showList = ref(false);
+
 const fallbackInput = ref(settingsStore.settings.fontFamilyFallback);
+const fallbackQuery = ref("");
 const showFallbackList = ref(false);
 
 const filteredFonts = computed(() => {
-  const q = fontInput.value.toLowerCase();
-  return COMMON_FONTS.filter((f) => f.toLowerCase().includes(q));
+  const q = fontQuery.value.toLowerCase().trim();
+  if (!q) return allFonts.value;
+  return allFonts.value.filter((f) => f.toLowerCase().includes(q));
 });
 
 const filteredFallbackFonts = computed(() => {
-  const q = fallbackInput.value.toLowerCase();
-  return COMMON_FONTS.filter((f) => f.toLowerCase().includes(q));
+  const q = fallbackQuery.value.toLowerCase().trim();
+  if (!q) return allFonts.value;
+  return allFonts.value.filter((f) => f.toLowerCase().includes(q));
 });
 
 function onFocus() {
   fontInput.value = settingsStore.settings.fontFamily;
+  fontQuery.value = "";
   showList.value = true;
 }
 
 function onBlur() {
-  setTimeout(() => { showList.value = false; }, 150);
+  setTimeout(() => {
+    showList.value = false;
+    fontQuery.value = "";
+    fontInput.value = settingsStore.settings.fontFamily;
+  }, 150);
 }
 
 async function selectFont(font: string): Promise<void> {
   fontInput.value = font;
+  fontQuery.value = "";
   showList.value = false;
   await settingsStore.update("fontFamily", font);
 }
 
 async function onInput(value: string): Promise<void> {
   fontInput.value = value;
+  fontQuery.value = value;
   showList.value = true;
   await settingsStore.update("fontFamily", value);
 }
 
 function onFallbackFocus() {
   fallbackInput.value = settingsStore.settings.fontFamilyFallback;
+  fallbackQuery.value = "";
   showFallbackList.value = true;
 }
 
 function onFallbackBlur() {
-  setTimeout(() => { showFallbackList.value = false; }, 150);
+  setTimeout(() => {
+    showFallbackList.value = false;
+    fallbackQuery.value = "";
+    fallbackInput.value = settingsStore.settings.fontFamilyFallback;
+  }, 150);
 }
 
 async function selectFallbackFont(font: string): Promise<void> {
   fallbackInput.value = font;
+  fallbackQuery.value = "";
   showFallbackList.value = false;
   await settingsStore.update("fontFamilyFallback", font);
 }
 
 async function onFallbackInput(value: string): Promise<void> {
   fallbackInput.value = value;
+  fallbackQuery.value = value;
   showFallbackList.value = true;
   await settingsStore.update("fontFamilyFallback", value);
 }
@@ -111,6 +156,7 @@ async function toggleWordWrap(): Promise<void> {
           v-for="font in filteredFonts"
           :key="font"
           class="font-list-item"
+          :style="{ fontFamily: font }"
           @mousedown.prevent="selectFont(font)"
         >
           {{ font }}
@@ -135,6 +181,7 @@ async function toggleWordWrap(): Promise<void> {
           v-for="font in filteredFallbackFonts"
           :key="font"
           class="font-list-item"
+          :style="{ fontFamily: font }"
           @mousedown.prevent="selectFallbackFont(font)"
         >
           {{ font }}
