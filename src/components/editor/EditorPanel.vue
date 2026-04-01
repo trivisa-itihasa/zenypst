@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onUnmounted, nextTick, computed } from "vue";
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { EditorView } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
 import { useEditorStore } from "@/stores/editor";
@@ -16,6 +16,19 @@ const { activeTheme } = useTheme();
 
 const editorContainer = ref<HTMLElement | null>(null);
 let view: EditorView | null = null;
+
+const availableFonts = ref<string[]>([]);
+
+onMounted(async () => {
+  if ("__TAURI_INTERNALS__" in window) {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      availableFonts.value = await invoke<string[]>("list_system_fonts");
+    } catch (e) {
+      console.error("Failed to load system fonts for completion:", e);
+    }
+  }
+});
 
 // Intercept IME toggle keys (全角半角 etc.) in the capture phase so they never
 // reach CodeMirror's keydown handler, which would log a warning and potentially
@@ -63,6 +76,7 @@ function mountEditor(content: string): void {
     fontSize: settingsStore.settings.fontSize,
     showLineNumbers: settingsStore.settings.showLineNumbers,
     wordWrap: settingsStore.settings.wordWrap,
+    getFonts: () => availableFonts.value,
     onChange: (newContent: string) => {
       if (editorStore.activeTabId) {
         editorStore.updateContent(editorStore.activeTabId, newContent);

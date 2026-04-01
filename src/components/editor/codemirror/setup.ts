@@ -31,6 +31,7 @@ import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import type { Extension } from "@codemirror/state";
 import { typstLanguage } from "./typst-language";
 import { buildThemeExtension } from "./theme";
+import { fontCompletion } from "./font-completion";
 import type { ThemeColors } from "@/types";
 
 export interface EditorConfig {
@@ -42,6 +43,8 @@ export interface EditorConfig {
   showLineNumbers: boolean;
   wordWrap: boolean;
   onChange: (content: string) => void;
+  /** Returns the list of available font names for in-editor font-name completion. */
+  getFonts?: () => string[];
 }
 
 /**
@@ -85,6 +88,8 @@ export function createEditorState(config: EditorConfig): EditorState {
         fontSize: `${config.fontSize}px`,
       },
     }),
+    // Font name completion (triggers inside `font: "..."` strings)
+    ...(config.getFonts ? [fontCompletion(config.getFonts)] : []),
     // Change listener
     EditorView.updateListener.of((update: ViewUpdate) => {
       if (update.docChanged) {
