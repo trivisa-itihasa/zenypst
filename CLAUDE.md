@@ -34,12 +34,11 @@ npm run dev       # Vite only (no Tauri IPC, for UI work from browser)
 
 - Remote: `https://github.com/trivisa-itihasa/zenypst.git`
 - Default branch: `main`
-- Push requires token from `~/.zshrc_local`:
+- Push using token stored in `~/.gitconfig_local` (URL rewrite):
   ```bash
-  source ~/.zshrc_local
-  git push "https://${GITHUB_TOKEN}@github.com/trivisa-itihasa/zenypst.git" main
+  git -c include.path=/home/gecko/.gitconfig_local push origin main
   ```
-- Windows CI builds via GitHub Actions (`.github/workflows/build-windows.yml`) — artifacts published as draft Releases
+- Multi-platform CI builds via GitHub Actions (`.github/workflows/build.yml`) — Windows/macOS/Ubuntu artifacts published as draft Releases
 
 ---
 
