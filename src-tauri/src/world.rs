@@ -28,6 +28,24 @@ impl ZenypstWorld {
             }
         }
 
+        // Load system fonts so that user-specified fonts in Typst source work
+        let mut db = fontdb::Database::new();
+        db.load_system_fonts();
+        let mut loaded_paths = std::collections::HashSet::new();
+        for face in db.faces() {
+            if let fontdb::Source::File(path) = &face.source {
+                if loaded_paths.insert(path.clone()) {
+                    if let Ok(data) = std::fs::read(path) {
+                        let bytes = Bytes::new(data);
+                        for font in Font::iter(bytes) {
+                            book.push(font.info().clone());
+                            fonts.push(font);
+                        }
+                    }
+                }
+            }
+        }
+
         let main_id = FileId::new(None, VirtualPath::new("main.typ"));
         let source = Source::new(main_id, String::new());
 

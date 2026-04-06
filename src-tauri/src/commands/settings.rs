@@ -330,9 +330,17 @@ pub async fn list_system_fonts() -> Vec<String> {
     let mut db = fontdb::Database::new();
     db.load_system_fonts();
 
+    // Typst resolves fonts by their English (ASCII) family names.
+    // Localized names (e.g. "ヒラギノ丸ゴ ProN") are ignored by the compiler,
+    // so we only expose ASCII names to avoid suggesting unusable entries.
     let mut families: std::collections::HashSet<String> = db
         .faces()
-        .flat_map(|face| face.families.iter().map(|(name, _lang)| name.clone()))
+        .flat_map(|face| {
+            face.families
+                .iter()
+                .filter(|(name, _lang)| name.is_ascii())
+                .map(|(name, _lang)| name.clone())
+        })
         .collect();
 
     let mut result: Vec<String> = families.drain().collect();

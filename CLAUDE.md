@@ -8,7 +8,14 @@ Full product specification is in [SPEC.md](./SPEC.md).
 
 ## Development Environment
 
-- **OS**: WSL2 (Ubuntu 24.04) on Windows 11
+`dev.sh` supports both macOS and WSL2/Linux and detects the OS automatically.
+
+### macOS
+- **Node.js**: via nvm (`~/.nvm/nvm.sh`) or system install
+- **Rust/cargo**: install via `rustup` — `dev.sh` adds `~/.cargo/bin` to PATH automatically
+- No GTK/WebKit libraries needed — Tauri uses the system WKWebView
+
+### WSL2 (Ubuntu 24.04) on Windows 11
 - **Node.js**: managed via nvm — always source before running npm commands:
   ```bash
   source ~/.nvm/nvm.sh  # or open a new shell (nvm is in ~/.zshrc)
@@ -21,7 +28,7 @@ Full product specification is in [SPEC.md](./SPEC.md).
   export WEBKIT_DISABLE_COMPOSITING_MODE=1
   export LIBGL_ALWAYS_SOFTWARE=1
   ```
-  `dev.sh` sets these automatically.
+  `dev.sh` sets these automatically on Linux.
 
 ## Running the App
 

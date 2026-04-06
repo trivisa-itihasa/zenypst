@@ -40,6 +40,8 @@ pub struct NativeCompileError {
     pub file: Option<String>,
     pub line: Option<u32>,
     pub column: Option<u32>,
+    pub end_line: Option<u32>,
+    pub end_column: Option<u32>,
     pub source_line: Option<String>,
     pub hints: Vec<String>,
 }
@@ -84,6 +86,8 @@ fn diag_to_error(
     let mut file: Option<String> = None;
     let mut line: Option<u32> = None;
     let mut column: Option<u32> = None;
+    let mut end_line: Option<u32> = None;
+    let mut end_column: Option<u32> = None;
     let mut source_line: Option<String> = None;
 
     if let Some(id) = diag.span.id() {
@@ -98,11 +102,17 @@ fn diag_to_error(
                 if let Some(col) = lines.byte_to_column(range.start) {
                     column = Some(col as u32 + 1);
                 }
+                if let Some(ln) = lines.byte_to_line(range.end) {
+                    end_line = Some(ln as u32 + 1);
+                }
+                if let Some(col) = lines.byte_to_column(range.end) {
+                    end_column = Some(col as u32 + 1);
+                }
             }
         }
     }
 
-    NativeCompileError { severity, message, file, line, column, source_line, hints }
+    NativeCompileError { severity, message, file, line, column, end_line, end_column, source_line, hints }
 }
 
 fn make_pdf_options() -> typst_pdf::PdfOptions<'static> {
@@ -232,6 +242,8 @@ fn compile_to_pdf(
                         file: None,
                         line: None,
                         column: None,
+                        end_line: None,
+                        end_column: None,
                         source_line: None,
                         hints: vec![],
                     };

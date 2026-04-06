@@ -4,13 +4,15 @@ import { EditorView } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
 import { useEditorStore } from "@/stores/editor";
 import { useSettingsStore } from "@/stores/settings";
+import { usePreviewStore } from "@/stores/preview";
 import { useCompiler } from "@/composables/useCompiler";
 import { useTheme } from "@/composables/useTheme";
-import { createEditorState, buildDynamicExtensions } from "./codemirror/setup";
+import { createEditorState, buildDynamicExtensions, applyDiagnostics } from "./codemirror/setup";
 import TabBar from "./TabBar.vue";
 
 const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
+const previewStore = usePreviewStore();
 const { scheduleCompile, triggerCompile } = useCompiler();
 const { activeTheme } = useTheme();
 
@@ -89,6 +91,9 @@ function mountEditor(content: string): void {
     state,
     parent: editorContainer.value,
   });
+
+  // Re-apply any existing diagnostics after mounting
+  applyDiagnostics(view, previewStore.errors, previewStore.warnings);
 }
 
 // Watch for jump requests from PDF viewer (double-click sync)
@@ -107,6 +112,16 @@ watch(
       scrollIntoView: true,
     });
     view.focus();
+  }
+);
+
+// Watch for compile errors/warnings and push them into the editor as diagnostics
+watch(
+  [() => previewStore.errors, () => previewStore.warnings],
+  ([errors, warnings]) => {
+    if (view) {
+      applyDiagnostics(view, errors, warnings);
+    }
   }
 );
 

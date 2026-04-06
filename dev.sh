@@ -21,28 +21,33 @@ err()  { echo -e "${RED}[zenypst]${RESET} $*" >&2; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# ── WSL/Mesa GPU フォールバック回避 ─────────────────────────────────────────
+# ── OS 検出 ─────────────────────────────────────────────────────────────────
+OS_TYPE="$(uname -s)"
+
+# ── WSL/Mesa GPU フォールバック回避 (Linux/WSL2 のみ) ─────────────────────────
 # WSL2 では GPU アクセスに失敗して WebKit の起動が遅くなるため、
 # 最初からソフトウェアレンダリングを使うよう指定する。
-export WEBKIT_DISABLE_DMABUF_RENDERER=1
-export WEBKIT_DISABLE_COMPOSITING_MODE=1
-export LIBGL_ALWAYS_SOFTWARE=1
+if [ "$OS_TYPE" = "Linux" ]; then
+  export WEBKIT_DISABLE_DMABUF_RENDERER=1
+  export WEBKIT_DISABLE_COMPOSITING_MODE=1
+  export LIBGL_ALWAYS_SOFTWARE=1
 
-# ── IME (日本語入力) 設定 ────────────────────────────────────────────────────
-# GTK_IM_MODULE が未設定の場合のみ、インストール済みの IM を自動検出して設定する。
-if [ -z "${GTK_IM_MODULE:-}" ]; then
-  if command -v fcitx5 &>/dev/null; then
-    export GTK_IM_MODULE=fcitx
-    export QT_IM_MODULE=fcitx
-    export XMODIFIERS=@im=fcitx
-  elif command -v fcitx &>/dev/null; then
-    export GTK_IM_MODULE=fcitx
-    export QT_IM_MODULE=fcitx
-    export XMODIFIERS=@im=fcitx
-  elif command -v ibus-daemon &>/dev/null; then
-    export GTK_IM_MODULE=ibus
-    export QT_IM_MODULE=ibus
-    export XMODIFIERS=@im=ibus
+  # ── IME (日本語入力) 設定 ────────────────────────────────────────────────────
+  # GTK_IM_MODULE が未設定の場合のみ、インストール済みの IM を自動検出して設定する。
+  if [ -z "${GTK_IM_MODULE:-}" ]; then
+    if command -v fcitx5 &>/dev/null; then
+      export GTK_IM_MODULE=fcitx
+      export QT_IM_MODULE=fcitx
+      export XMODIFIERS=@im=fcitx
+    elif command -v fcitx &>/dev/null; then
+      export GTK_IM_MODULE=fcitx
+      export QT_IM_MODULE=fcitx
+      export XMODIFIERS=@im=fcitx
+    elif command -v ibus-daemon &>/dev/null; then
+      export GTK_IM_MODULE=ibus
+      export QT_IM_MODULE=ibus
+      export XMODIFIERS=@im=ibus
+    fi
   fi
 fi
 
@@ -84,23 +89,25 @@ if ! command -v cargo &>/dev/null; then
   fi
 fi
 
-# pkg-config の確認
-if ! command -v pkg-config &>/dev/null; then
-  TAURI_READY=false
-  MISSING+=("pkg-config (sudo apt install pkg-config)")
-fi
+# Linux (WSL2) のみ: GTK/WebKit 開発ライブラリの確認
+# macOS は WKWebView をシステムで持つため不要
+if [ "$OS_TYPE" = "Linux" ]; then
+  if ! command -v pkg-config &>/dev/null; then
+    TAURI_READY=false
+    MISSING+=("pkg-config (sudo apt install pkg-config)")
+  fi
 
-# GTK/WebKit 開発ライブラリの確認
-if command -v pkg-config &>/dev/null; then
-  for lib in "gtk+-3.0" "webkit2gtk-4.1"; do
-    if ! pkg-config --exists "$lib" 2>/dev/null; then
-      TAURI_READY=false
-      case "$lib" in
-        "gtk+-3.0")    MISSING+=("libgtk-3-dev (sudo apt install libgtk-3-dev)") ;;
-        "webkit2gtk-4.1") MISSING+=("libwebkit2gtk-4.1-dev (sudo apt install libwebkit2gtk-4.1-dev)") ;;
-      esac
-    fi
-  done
+  if command -v pkg-config &>/dev/null; then
+    for lib in "gtk+-3.0" "webkit2gtk-4.1"; do
+      if ! pkg-config --exists "$lib" 2>/dev/null; then
+        TAURI_READY=false
+        case "$lib" in
+          "gtk+-3.0")       MISSING+=("libgtk-3-dev (sudo apt install libgtk-3-dev)") ;;
+          "webkit2gtk-4.1") MISSING+=("libwebkit2gtk-4.1-dev (sudo apt install libwebkit2gtk-4.1-dev)") ;;
+        esac
+      fi
+    done
+  fi
 fi
 
 # ── 使用中ポートの解放 ──────────────────────────────────────────────────────
@@ -133,7 +140,7 @@ if $TAURI_READY; then
   echo ""
   npm run tauri:dev &
   PIDS+=($!)
-  log "Tauri dev PID: ${PIDS[-1]}"
+  log "Tauri dev PID: $!"
 else
   warn "以下の依存関係が不足しているため、フロントエンドのみ起動します:"
   for m in "${MISSING[@]}"; do
@@ -141,8 +148,8 @@ else
   done
   echo ""
 
-  # まとめて apt install コマンドを提示
-  if [[ " ${MISSING[*]} " == *"apt install"* ]]; then
+  # Linux: まとめて apt install コマンドを提示
+  if [ "$OS_TYPE" = "Linux" ] && [[ " ${MISSING[*]} " == *"apt install"* ]]; then
     echo -e "  ${BOLD}システムライブラリを一括インストールするには:${RESET}"
     echo -e "  ${CYAN}sudo apt install -y pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev \\"
     echo -e "    libssl-dev libayatana-appindicator3-dev librsvg2-dev \\"
@@ -154,7 +161,7 @@ else
   echo ""
   npm run dev &
   PIDS+=($!)
-  log "Vite dev PID: ${PIDS[-1]}"
+  log "Vite dev PID: $!"
 fi
 
 echo ""
