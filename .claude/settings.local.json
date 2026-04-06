@@ -71,7 +71,16 @@
       "Bash(npx @tauri-apps/cli icon /mnt/c/Users/admin/Downloads/icon.svg --output src-tauri/icons)",
       "Bash(cat:*)",
       "Bash(find /home/gecko/project/zenypst/src-tauri -name *.wxs -o -name *.nsi -o -name *.wix)",
-      "Bash(npx tauri:*)"
+      "Bash(npx tauri:*)",
+      "WebSearch",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:lib.rs)",
+      "WebFetch(domain:myriad-dreamin.github.io)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git:*)"
     ]
   }
 }
