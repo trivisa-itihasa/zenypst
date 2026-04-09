@@ -12,82 +12,59 @@ const emit = defineEmits<{ (e: "update:modelValue", v: boolean): void }>();
 const settingsStore = useSettingsStore();
 const tab = ref("editor");
 
-async function toggleColorScheme(): Promise<void> {
-  const next = settingsStore.settings.colorScheme === "dark" ? "light" : "dark";
-  await settingsStore.update("colorScheme", next);
+interface NavItem {
+  value: string;
+  icon: string;
+  label: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { value: "editor", icon: "mdi-format-font", label: "Editor" },
+  { value: "theme", icon: "mdi-palette", label: "Theme" },
+  { value: "preview", icon: "mdi-eye", label: "Preview" },
+  { value: "appearance", icon: "mdi-monitor", label: "Appearance" },
+  { value: "typst", icon: "mdi-typewriter", label: "Typst" },
+];
+
+async function toggleColorScheme(value: boolean): Promise<void> {
+  await settingsStore.update("colorScheme", value ? "dark" : "light");
 }
 </script>
 
 <template>
-  <v-dialog
+  <q-dialog
     :model-value="modelValue"
-    max-width="720"
-    scrollable
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        Settings
-        <v-spacer />
-        <v-btn
-          icon
-          variant="text"
-          @click="emit('update:modelValue', false)"
-        >
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-      </v-card-title>
+    <q-card class="zen-card" style="width: 720px; max-width: 95vw;">
+      <q-card-section class="row items-center q-pa-md">
+        <div class="text-subtitle-2">Settings</div>
+        <q-space />
+        <q-btn flat dense round icon="mdi-close" @click="emit('update:modelValue', false)" />
+      </q-card-section>
 
-      <v-divider />
+      <q-separator />
 
-      <v-card-text style="min-height: 500px;">
-        <v-row>
-          <v-col cols="3">
-            <v-list density="compact" nav>
-              <v-list-item
-                prepend-icon="mdi-format-font"
-                title="Editor"
-                value="editor"
-                :active="tab === 'editor'"
-                active-color="primary"
-                @click="tab = 'editor'"
-              />
-              <v-list-item
-                prepend-icon="mdi-palette"
-                title="Theme"
-                value="theme"
-                :active="tab === 'theme'"
-                active-color="primary"
-                @click="tab = 'theme'"
-              />
-              <v-list-item
-                prepend-icon="mdi-eye"
-                title="Preview"
-                value="preview"
-                :active="tab === 'preview'"
-                active-color="primary"
-                @click="tab = 'preview'"
-              />
-              <v-list-item
-                prepend-icon="mdi-monitor"
-                title="Appearance"
-                value="appearance"
-                :active="tab === 'appearance'"
-                active-color="primary"
-                @click="tab = 'appearance'"
-              />
-              <v-list-item
-                prepend-icon="mdi-typewriter"
-                title="Typst"
-                value="typst"
-                :active="tab === 'typst'"
-                active-color="primary"
-                @click="tab = 'typst'"
-              />
-            </v-list>
-          </v-col>
+      <q-card-section style="min-height: 500px;">
+        <div class="row no-wrap">
+          <div class="col-auto" style="width: 180px;">
+            <q-list dense>
+              <q-item
+                v-for="item in NAV_ITEMS"
+                :key="item.value"
+                clickable
+                :active="tab === item.value"
+                active-class="zen-nav-active"
+                class="rounded"
+                @click="tab = item.value"
+              >
+                <q-item-section avatar><q-icon :name="item.icon" size="18px" /></q-item-section>
+                <q-item-section>{{ item.label }}</q-item-section>
+              </q-item>
+            </q-list>
+          </div>
 
-          <v-col cols="9" class="pl-4">
+          <div class="col q-pl-md">
             <div v-show="tab === 'editor'">
               <FontSettings />
             </div>
@@ -99,28 +76,26 @@ async function toggleColorScheme(): Promise<void> {
             </div>
             <div v-show="tab === 'appearance'">
               <p class="text-subtitle-2 mb-4">Appearance</p>
-              <v-switch
+              <q-toggle
                 :model-value="settingsStore.settings.colorScheme === 'dark'"
                 label="Dark Mode"
-                density="compact"
-                hide-details
-                class="mb-4"
+                dense
                 @update:model-value="toggleColorScheme"
               />
-
             </div>
             <div v-show="tab === 'typst'">
               <TypstSettings />
             </div>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
+  </q-dialog>
 </template>
 
 <style scoped>
-:deep(.v-list-item__prepend) {
-  margin-inline-end: -12px;
+.zen-nav-active {
+  background: rgba(var(--zen-primary-rgb), 0.12);
+  color: var(--zen-primary);
 }
 </style>

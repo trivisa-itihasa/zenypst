@@ -33,52 +33,60 @@ function select(template: Template): void {
 </script>
 
 <template>
-  <v-dialog
+  <q-dialog
     :model-value="modelValue"
-    max-width="560"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <v-card>
-      <v-card-title>New File — Choose Template</v-card-title>
-      <v-card-text>
-        <v-text-field
+    <q-card class="zen-card" style="width: 560px; max-width: 95vw;">
+      <q-card-section><div class="text-subtitle-2">New File — Choose Template</div></q-card-section>
+      <q-card-section>
+        <q-input
           v-model="search"
           placeholder="Search templates…"
-          density="compact"
-          variant="outlined"
-          prepend-inner-icon="mdi-magnify"
-          hide-details
-          class="mb-3"
+          outlined
+          dense
           clearable
+          class="mb-3"
+        >
+          <template #prepend>
+            <q-icon name="mdi-magnify" size="18px" />
+          </template>
+        </q-input>
+
+        <q-linear-progress
+          v-if="templateStore.isLoading"
+          indeterminate
+          color="primary"
+          class="mb-2"
         />
 
-        <v-progress-linear v-if="templateStore.isLoading" indeterminate color="primary" class="mb-2" />
-
-        <v-list density="compact">
-          <v-list-item
+        <q-list dense>
+          <q-item
             v-for="template in filteredTemplates"
             :key="template.id"
-            :subtitle="template.description"
+            clickable
             @click="select(template)"
           >
-            <template #prepend>
-              <v-icon>{{ template.builtIn ? 'mdi-file-document-outline' : 'mdi-file-document-edit-outline' }}</v-icon>
-            </template>
-            <v-list-item-title>{{ template.name }}</v-list-item-title>
-          </v-list-item>
+            <q-item-section avatar>
+              <q-icon :name="template.builtIn ? 'mdi-file-document-outline' : 'mdi-file-document-edit-outline'" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ template.name }}</q-item-label>
+              <q-item-label caption>{{ template.description }}</q-item-label>
+            </q-item-section>
+          </q-item>
 
-          <v-list-item
+          <q-item
             v-if="filteredTemplates.length === 0 && !templateStore.isLoading"
             class="text-medium-emphasis"
           >
-            No templates found
-          </v-list-item>
-        </v-list>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn @click="emit('update:modelValue', false)">Cancel</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+            <q-item-section>No templates found</q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Cancel" @click="emit('update:modelValue', false)" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>

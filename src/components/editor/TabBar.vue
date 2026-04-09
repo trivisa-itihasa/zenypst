@@ -35,41 +35,36 @@ function getTabIcon(tab: FileTab): string {
       :class="{ 'tab-item--active': tab.id === editorStore.activeTabId }"
       @click="selectTab(tab)"
     >
-      <v-icon size="14" class="mr-1 flex-shrink-0" :icon="getTabIcon(tab)" />
+      <q-icon size="14px" class="mr-1 flex-shrink-0" :name="getTabIcon(tab)" />
       <span class="tab-name">
         {{ tab.name }}
       </span>
       <span v-if="tab.isDirty" class="tab-dirty ml-1 flex-shrink-0">●</span>
-      <v-btn
-        icon
-        density="compact"
-        size="x-small"
-        variant="text"
+      <button
         class="tab-close ml-auto flex-shrink-0"
         @click.stop="closeTab($event, tab)"
       >
-        <v-icon size="12">mdi-close</v-icon>
-      </v-btn>
+        <q-icon name="mdi-close" size="12px" />
+      </button>
     </div>
 
     <div v-if="editorStore.tabs.length === 0" class="tab-placeholder px-4 text-medium-emphasis text-caption">
       No files open
     </div>
 
-    <v-spacer />
+    <q-space />
 
-    <v-btn
+    <q-btn
       v-if="settingsStore.settings.previewMode === 'manual'"
-      size="x-small"
+      dense
+      flat
       color="primary"
-      variant="tonal"
-      :disabled="!editorStore.activeTab"
+      icon="mdi-play"
+      :disable="!editorStore.activeTab"
       title="Compile"
       class="compile-btn mx-2 flex-shrink-0"
       @click="triggerCompile"
-    >
-      <v-icon>mdi-play</v-icon>
-    </v-btn>
+    />
   </div>
 </template>
 
@@ -77,8 +72,8 @@ function getTabIcon(tab: FileTab): string {
 .tab-bar {
   height: var(--panel-header-height);
   min-height: var(--panel-header-height);
-  background: rgb(var(--v-theme-surface));
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: var(--zen-surface);
+  border-bottom: 1px solid var(--zen-border);
   gap: 0;
   scrollbar-width: thin;
 }
@@ -88,21 +83,21 @@ function getTabIcon(tab: FileTab): string {
   width: 160px;
   flex-shrink: 0;
   cursor: pointer;
-  border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-right: 1px solid var(--zen-border);
   user-select: none;
   font-size: var(--ui-font-size-sm);
-  color: rgba(var(--v-theme-on-surface), 0.6);
+  color: rgba(var(--zen-on-surface-rgb), 0.6);
   transition: background 0.1s;
 }
 
 .tab-item:hover {
-  background: rgba(var(--v-theme-on-surface), 0.06);
+  background: rgba(var(--zen-on-surface-rgb), 0.06);
 }
 
 .tab-item--active {
-  background: rgb(var(--v-theme-background));
-  color: rgb(var(--v-theme-on-surface));
-  border-bottom: 2px solid rgb(var(--v-theme-primary));
+  background: var(--zen-background);
+  color: var(--zen-on-surface);
+  border-bottom: 2px solid var(--zen-primary);
 }
 
 .tab-name {
@@ -114,13 +109,26 @@ function getTabIcon(tab: FileTab): string {
 }
 
 .tab-dirty {
-  color: rgb(var(--v-theme-warning));
+  color: var(--zen-warning);
   font-size: var(--ui-font-size-xxs);
 }
 
 .tab-close {
   opacity: 0;
   transition: opacity 0.1s;
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 2px;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-close:hover {
+  background: rgba(var(--zen-on-surface-rgb), 0.12);
 }
 
 .tab-item:hover .tab-close,
@@ -135,10 +143,10 @@ function getTabIcon(tab: FileTab): string {
 }
 
 .compile-btn {
-  border-radius: 4px !important;
-  min-width: 0 !important;
-  width: calc(var(--panel-header-height) - 8px) !important;
-  height: calc(var(--panel-header-height) - 8px) !important;
-  padding: 0 !important;
+  border-radius: 4px;
+  min-width: 0;
+  width: calc(var(--panel-header-height) - 8px);
+  height: calc(var(--panel-header-height) - 8px);
+  padding: 0;
 }
 </style>

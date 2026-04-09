@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Zenypst** is a desktop Typst editor application built with Tauri v2, Vue 3, and Vuetify. It provides a VSCode-like editing experience specifically tailored for Typst document authoring, with live PDF preview, customizable syntax highlighting themes, and a template management system.
+**Zenypst** is a desktop Typst editor application built with Tauri v2, Vue 3, and Quasar. It provides a VSCode-like editing experience specifically tailored for Typst document authoring, with live PDF preview, customizable syntax highlighting themes, and a template management system.
 
 ---
 
@@ -12,7 +12,7 @@
 |-------|-----------|
 | Desktop runtime | Tauri v2 (Rust backend) |
 | Frontend framework | Vue 3 (Composition API + `<script setup>`) |
-| UI library | Vuetify 3 |
+| UI library | Quasar 2 |
 | Code editor | CodeMirror 6 |
 | Typst compilation | Typst CLI (invoked from Tauri/Rust side) |
 | PDF rendering | pdf.js (embedded in right panel) |
@@ -49,7 +49,7 @@ zenypst/
 │   ├── main.ts
 │   ├── App.vue
 │   ├── plugins/
-│   │   └── vuetify.ts
+│   │   └── quasar.ts
 │   ├── router/
 │   │   └── index.ts
 │   ├── stores/
@@ -243,7 +243,7 @@ User edits in CodeMirror 6
   - Click file → open in editor tab
   - Right-click → context menu: New File, New Folder, Rename, Delete, Reveal in File Manager
   - Drag-and-drop reordering is NOT required.
-- **Icons**: Use Vuetify's `mdi` icons to differentiate file types (`.typ`, `.pdf`, `.png`, `.jpg`, folders, etc.).
+- **Icons**: Use Quasar's `mdi` icons (via `@quasar/extras`) to differentiate file types (`.typ`, `.pdf`, `.png`, `.jpg`, folders, etc.).
 
 ### 7. Template System
 
@@ -294,7 +294,7 @@ User edits in CodeMirror 6
 - **Default widths**: File tree: 250px, Editor: flexible (fill), PDF viewer: 40% of remaining space.
 - **Minimum widths**: File tree: 150px, Editor: 300px, PDF viewer: 200px.
 - **Panel collapsing**: Double-click a splitter or use View menu to collapse/expand panels.
-- **Color scheme**: Follow Vuetify's dark theme by default (consistent with the editor's dark theme). Support light mode toggle.
+- **Color scheme**: Use Quasar's Dark plugin with a dark theme by default (consistent with the editor's dark theme). Support light mode toggle.
 - **Toolbar**: Flat menu bar with items: File (New, Open File, Open Folder, Save, Save As), Edit (Undo, Redo, Find, Replace), View (Toggle File Tree, Toggle Preview, Zoom In/Out), Settings (open settings dialog), Help (About, Keyboard Shortcuts).
 - **Status bar** (bottom): Show current file path, line:column, Typst compile status (idle / compiling / error count), selected preview mode indicator.
 
@@ -456,10 +456,10 @@ Parse this to extract:
 - **Vue components**: Use `<script setup lang="ts">` with Composition API. No Options API.
 - **Naming**: PascalCase for components, camelCase for composables and functions, UPPER_SNAKE_CASE for constants.
 - **Stores**: Pinia with setup store syntax (`defineStore` with function).
-- **Error handling**: All Tauri command invocations must be wrapped in try/catch. Display user-friendly error messages via Vuetify's `v-snackbar`.
+- **Error handling**: All Tauri command invocations must be wrapped in try/catch. Display user-friendly error messages via Quasar's `Notify` plugin.
 - **Async operations**: Use `async/await`, never raw `.then()` chains.
 - **Comments**: Add JSDoc comments to exported functions and complex logic. Inline comments for non-obvious behavior.
-- **CSS**: Use Vuetify's utility classes and theme system where possible. Scoped `<style>` for component-specific styles. Avoid inline styles.
+- **CSS**: Use Quasar's utility classes (and the project's `--zen-*` CSS variables) where possible. Scoped `<style>` for component-specific styles. Avoid inline styles.
 - **Rust**: Follow standard Rust formatting (`cargo fmt`). Use `thiserror` for error types. Keep Tauri commands thin — delegate to helper modules.
 
 ---
@@ -490,7 +490,8 @@ npm run tauri build
 {
   "dependencies": {
     "vue": "^3.5",
-    "vuetify": "^3.7",
+    "quasar": "^2.17",
+    "@quasar/extras": "^1.16",
     "pinia": "^2.2",
     "@codemirror/state": "^6.x",
     "@codemirror/view": "^6.x",
@@ -504,15 +505,15 @@ npm run tauri build
     "@tauri-apps/api": "^2.x",
     "@tauri-apps/plugin-dialog": "^2.x",
     "@tauri-apps/plugin-fs": "^2.x",
-    "@tauri-apps/plugin-shell": "^2.x",
-    "@mdi/font": "^7.x"
+    "@tauri-apps/plugin-shell": "^2.x"
   },
   "devDependencies": {
+    "@quasar/vite-plugin": "^1.8",
     "@tauri-apps/cli": "^2.x",
     "typescript": "^5.x",
     "vite": "^6.x",
     "@vitejs/plugin-vue": "^5.x",
-    "sass": "^1.x"
+    "sass-embedded": "^1.83"
   }
 }
 ```

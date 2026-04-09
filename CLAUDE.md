@@ -72,5 +72,5 @@ All Tauri command return structs need `#[serde(rename_all = "camelCase")]`. With
 - Stores: Pinia setup-store syntax (`defineStore` with arrow function)
 - Tauri calls: always `try/catch`; show errors via `v-snackbar`
 - Async: `async/await` only, no `.then()` chains
-- CSS: Vuetify utility classes + scoped `<style>`; avoid inline styles
+- CSS: Quasar utility classes + scoped `<style>`; avoid inline styles
 - Rust: `cargo fmt`; keep `#[tauri::command]` functions thin, delegate to helper modules

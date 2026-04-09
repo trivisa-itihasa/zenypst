@@ -23,6 +23,58 @@
 
   /* Tree */
   --tree-indent: 16px;
+
+  /* ----- App theme tokens (default = dark) ----- */
+  --zen-background: #1e1e2e;
+  --zen-surface: #181825;
+  --zen-surface-variant: #313244;
+
+  --zen-on-surface: #cdd6f4;
+  --zen-on-surface-rgb: 205, 214, 244;
+
+  --zen-primary: #9e9e9e;
+  --zen-primary-rgb: 158, 158, 158;
+  --zen-secondary: #89b4fa;
+
+  --zen-error: #ef5350;
+  --zen-error-rgb: 239, 83, 80;
+  --zen-warning: #fab387;
+  --zen-warning-rgb: 250, 179, 135;
+  --zen-info: #89dceb;
+  --zen-info-rgb: 137, 220, 235;
+  --zen-success: #a6e3a1;
+
+  --zen-border: rgba(205, 214, 244, 0.12);
+
+  --zen-on-surface-medium: rgba(205, 214, 244, 0.6);
+  --zen-on-surface-disabled: rgba(205, 214, 244, 0.38);
+}
+
+/* Light scheme overrides — applied via body class */
+body.zen-light {
+  --zen-background: #eff1f5;
+  --zen-surface: #e6e9f0;
+  --zen-surface-variant: #dce0e8;
+
+  --zen-on-surface: #4c4f69;
+  --zen-on-surface-rgb: 76, 79, 105;
+
+  --zen-primary: #616161;
+  --zen-primary-rgb: 97, 97, 97;
+  --zen-secondary: #1e66f5;
+
+  --zen-error: #d20f39;
+  --zen-error-rgb: 210, 15, 57;
+  --zen-warning: #fe640b;
+  --zen-warning-rgb: 254, 100, 11;
+  --zen-info: #04a5e5;
+  --zen-info-rgb: 4, 165, 229;
+  --zen-success: #40a02b;
+
+  --zen-border: rgba(76, 79, 105, 0.16);
+
+  --zen-on-surface-medium: rgba(76, 79, 105, 0.6);
+  --zen-on-surface-disabled: rgba(76, 79, 105, 0.38);
 }
 
 html, body, #app {
@@ -32,6 +84,8 @@ html, body, #app {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background: var(--zen-background);
+  color: var(--zen-on-surface);
 }
 
 // Smooth scrollbars
@@ -63,18 +117,85 @@ html, body, #app {
   outline: none !important;
 }
 
-// Speed up Vuetify animations (default is ~200ms)
-.v-overlay__content,
-.v-overlay__scrim {
-  transition-duration: 80ms !important;
-}
-.v-menu > .v-overlay__content {
-  transition-duration: 80ms !important;
-}
-.v-dialog > .v-overlay__content {
+// Speed up Quasar dialog/menu transitions
+.q-dialog__inner > * {
   transition-duration: 100ms !important;
 }
-.v-snackbar__wrapper {
+.q-menu {
+  transition-duration: 80ms !important;
+}
+.q-notification {
   transition-duration: 80ms !important;
 }
 
+// Common helper classes used throughout the app (replacing some Vuetify
+// utility classes from the previous build).
+.text-medium-emphasis {
+  color: var(--zen-on-surface-medium);
+}
+.text-error {
+  color: var(--zen-error);
+}
+.text-success {
+  color: var(--zen-success);
+}
+.text-warning {
+  color: var(--zen-warning);
+}
+.text-info {
+  color: var(--zen-info);
+}
+
+.text-caption {
+  font-size: var(--ui-font-size-xs);
+  line-height: 1.25;
+}
+.text-body-2 {
+  font-size: var(--ui-font-size-sm);
+  line-height: 1.4;
+}
+.text-subtitle-2 {
+  font-size: var(--ui-font-size);
+  font-weight: 600;
+}
+
+.text-uppercase { text-transform: uppercase; }
+.font-weight-medium { font-weight: 500; }
+.tracking-widest { letter-spacing: 0.08em; }
+
+// Layout helpers (a small subset compatible with the previous markup)
+.d-flex { display: flex; }
+.flex-column { flex-direction: column; }
+.flex-grow-1 { flex-grow: 1; }
+.flex-shrink-0 { flex-shrink: 0; }
+.fill-height { height: 100%; }
+.align-center { align-items: center; }
+.justify-center { justify-content: center; }
+
+.mr-1 { margin-right: 4px; }
+.mr-2 { margin-right: 8px; }
+.mr-4 { margin-right: 16px; }
+.ml-1 { margin-left: 4px; }
+.ml-auto { margin-left: auto; }
+.mt-1 { margin-top: 4px; }
+.mt-4 { margin-top: 16px; }
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mx-2 { margin-left: 8px; margin-right: 8px; }
+.ma-2 { margin: 8px; }
+.py-1 { padding-top: 4px; padding-bottom: 4px; }
+.pa-2 { padding: 8px; }
+.pa-3 { padding: 12px; }
+.px-2 { padding-left: 8px; padding-right: 8px; }
+.px-3 { padding-left: 12px; padding-right: 12px; }
+.pl-4 { padding-left: 16px; }
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.overflow-x-auto { overflow-x: auto; }
+.gap-2 { gap: 8px; }

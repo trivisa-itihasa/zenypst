@@ -50,54 +50,53 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <v-dialog
+  <q-dialog
     :model-value="modelValue"
-    max-width="700"
-    scrollable
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <v-card>
-      <v-card-title>
-        {{ template?.builtIn ? "Duplicate Template" : template?.id ? "Edit Template" : "New Template" }}
-      </v-card-title>
-      <v-card-text>
-        <v-text-field
+    <q-card class="zen-card" style="width: 700px; max-width: 95vw;">
+      <q-card-section>
+        <div class="text-subtitle-2">
+          {{ template?.builtIn ? "Duplicate Template" : template?.id ? "Edit Template" : "New Template" }}
+        </div>
+      </q-card-section>
+      <q-card-section style="max-height: 70vh; overflow-y: auto;">
+        <q-input
           v-model="form.name"
           label="Template Name"
-          density="compact"
-          variant="outlined"
+          outlined
+          dense
           class="mb-3"
         />
-        <v-text-field
+        <q-input
           v-model="form.description"
           label="Description"
-          density="compact"
-          variant="outlined"
+          outlined
+          dense
           class="mb-3"
         />
-        <v-label class="mb-1 text-caption">Content</v-label>
-        <v-textarea
+        <label class="text-caption mb-1">Content</label>
+        <q-input
           v-model="form.content"
-          variant="outlined"
-          rows="16"
-          auto-grow
-          no-resize
-          class="template-content-editor"
+          type="textarea"
+          outlined
+          autogrow
+          input-class="template-content-input"
           placeholder="#set page(paper: &quot;a4&quot;)&#10;&#10;= Title&#10;"
         />
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn @click="emit('update:modelValue', false)">Cancel</v-btn>
-        <v-btn color="primary" @click="save">Save Template</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Cancel" @click="emit('update:modelValue', false)" />
+        <q-btn flat color="primary" label="Save Template" @click="save" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <style scoped>
-.template-content-editor :deep(textarea) {
+:deep(.template-content-input) {
   font-family: "Fira Code", "Consolas", monospace;
   font-size: 13px;
+  min-height: 320px;
 }
 </style>

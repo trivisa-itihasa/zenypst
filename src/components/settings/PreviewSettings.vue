@@ -22,13 +22,14 @@ const PREVIEW_MODES: { value: AppSettings["previewMode"]; label: string; descrip
   },
 ];
 
-async function setMode(mode: AppSettings["previewMode"] | null): Promise<void> {
-  if (!mode) return;
+async function setMode(mode: AppSettings["previewMode"]): Promise<void> {
   await settingsStore.update("previewMode", mode);
 }
 
-async function updateDebounce(value: number): Promise<void> {
-  const clamped = Math.max(0, Math.min(5000, value));
+async function updateDebounce(value: string | number | null): Promise<void> {
+  const num = Number(value);
+  if (Number.isNaN(num)) return;
+  const clamped = Math.max(0, Math.min(5000, num));
   await settingsStore.update("realtimeDebounceMs", clamped);
 }
 </script>
@@ -38,54 +39,52 @@ async function updateDebounce(value: number): Promise<void> {
     <p class="text-subtitle-2 mb-4">Preview Settings</p>
 
     <p class="text-body-2 text-medium-emphasis mb-2">Update Mode</p>
-    <v-radio-group
-      :model-value="settingsStore.settings.previewMode"
-      @update:model-value="setMode"
-    >
-      <template v-for="mode in PREVIEW_MODES" :key="mode.value">
-        <v-radio :value="mode.value" density="compact" class="mode-radio">
-          <template #label>
-            <div>
-              <div>{{ mode.label }}</div>
-              <div class="text-caption text-medium-emphasis">{{ mode.description }}</div>
-            </div>
-          </template>
-        </v-radio>
-        <div v-if="mode.value === 'realtime'" class="debounce-wrap">
-          <v-text-field
-            :model-value="settingsStore.settings.realtimeDebounceMs"
-            :disabled="settingsStore.settings.previewMode !== 'realtime'"
-            label="Debounce (ms)"
-            type="number"
-            density="compact"
-            variant="outlined"
-            :min="0"
-            :max="5000"
-            hide-details
-            @update:model-value="(v) => updateDebounce(Number(v))"
-          />
-        </div>
-      </template>
-    </v-radio-group>
+    <template v-for="mode in PREVIEW_MODES" :key="mode.value">
+      <div class="mode-row">
+        <q-radio
+          :model-value="settingsStore.settings.previewMode"
+          :val="mode.value"
+          dense
+          @update:model-value="setMode"
+        >
+          <div class="mode-label">
+            <div>{{ mode.label }}</div>
+            <div class="text-caption text-medium-emphasis">{{ mode.description }}</div>
+          </div>
+        </q-radio>
+      </div>
+      <div v-if="mode.value === 'realtime'" class="debounce-wrap">
+        <q-input
+          :model-value="settingsStore.settings.realtimeDebounceMs"
+          :disable="settingsStore.settings.previewMode !== 'realtime'"
+          label="Debounce (ms)"
+          type="number"
+          outlined
+          dense
+          :min="0"
+          :max="5000"
+          @update:model-value="updateDebounce"
+        />
+      </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
-:deep(.mode-radio) {
+.mode-row {
   margin-bottom: 10px;
 }
 
-:deep(.mode-radio .v-selection-control) {
-  align-items: flex-start;
+.mode-label {
+  display: flex;
+  flex-direction: column;
+  margin-left: 4px;
 }
-:deep(.mode-radio .v-selection-control__wrapper) {
-  margin-top: 4px;
-  align-self: flex-start;
-}
+
 .debounce-wrap {
   padding-bottom: 8px;
   margin-top: 0;
-  padding-left: 24px;
-  width: 160px;
+  padding-left: 36px;
+  width: 200px;
 }
 </style>

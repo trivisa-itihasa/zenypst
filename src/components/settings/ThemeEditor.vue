@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import { useTheme } from "@/composables/useTheme";
 import { useSettingsStore } from "@/stores/settings";
 import type { Theme, ThemeColors } from "@/types";
@@ -89,119 +89,122 @@ async function confirmDelete(id: string): Promise<void> {
   <div class="theme-editor">
     <div class="d-flex align-center mb-4">
       <p class="text-subtitle-2 flex-grow-1">Syntax Theme</p>
-      <v-btn size="small" variant="outlined" prepend-icon="mdi-plus" @click="openNewTheme">
-        New Theme
-      </v-btn>
+      <q-btn dense outline no-caps icon="mdi-plus" label="New Theme" @click="openNewTheme" />
     </div>
 
-    <v-list density="compact" class="mb-4">
-      <v-list-item
+    <q-list dense class="mb-4">
+      <q-item
         v-for="theme in themes"
         :key="theme.id"
+        clickable
         :active="theme.id === settingsStore.settings.activeThemeId"
-        active-color="primary"
+        active-class="zen-theme-active"
         class="rounded"
         @click="setTheme(theme.id)"
       >
-        <template #prepend>
-          <v-icon :icon="theme.id === settingsStore.settings.activeThemeId ? 'mdi-radiobox-marked' : 'mdi-radiobox-blank'" />
-        </template>
-        <v-list-item-title>{{ theme.name }}</v-list-item-title>
-        <v-list-item-subtitle v-if="theme.builtIn">Built-in</v-list-item-subtitle>
-        <template #append>
-          <v-btn icon size="x-small" variant="text" @click.stop="openDuplicate(theme)">
-            <v-icon>mdi-content-copy</v-icon>
-          </v-btn>
-          <v-btn
-            v-if="!theme.builtIn"
-            icon size="x-small" variant="text"
-            @click.stop="openEdit(theme)"
-          >
-            <v-icon>mdi-pencil</v-icon>
-          </v-btn>
-          <v-btn
-            v-if="!theme.builtIn"
-            icon size="x-small" variant="text" color="error"
-            @click.stop="deleteConfirmId = theme.id"
-          >
-            <v-icon>mdi-delete</v-icon>
-          </v-btn>
-        </template>
-      </v-list-item>
-    </v-list>
+        <q-item-section avatar>
+          <q-icon
+            :name="theme.id === settingsStore.settings.activeThemeId ? 'mdi-radiobox-marked' : 'mdi-radiobox-blank'"
+          />
+        </q-item-section>
+        <q-item-section>
+          <q-item-label>{{ theme.name }}</q-item-label>
+          <q-item-label v-if="theme.builtIn" caption>Built-in</q-item-label>
+        </q-item-section>
+        <q-item-section side>
+          <div class="row no-wrap">
+            <q-btn dense flat round size="sm" icon="mdi-content-copy" @click.stop="openDuplicate(theme)" />
+            <q-btn
+              v-if="!theme.builtIn"
+              dense flat round size="sm"
+              icon="mdi-pencil"
+              @click.stop="openEdit(theme)"
+            />
+            <q-btn
+              v-if="!theme.builtIn"
+              dense flat round size="sm"
+              color="negative"
+              icon="mdi-delete"
+              @click.stop="deleteConfirmId = theme.id"
+            />
+          </div>
+        </q-item-section>
+      </q-item>
+    </q-list>
 
     <!-- Theme editor dialog -->
-    <v-dialog v-model="editDialog" max-width="560" scrollable>
-      <v-card>
-        <v-card-title>
-          {{ editingTheme.id ? "Edit Theme" : "New Theme" }}
-        </v-card-title>
-        <v-card-text>
-          <v-text-field
+    <q-dialog v-model="editDialog">
+      <q-card class="zen-card" style="width: 560px; max-width: 95vw;">
+        <q-card-section>
+          <div class="text-subtitle-2">{{ editingTheme.id ? "Edit Theme" : "New Theme" }}</div>
+        </q-card-section>
+        <q-card-section style="max-height: 70vh; overflow-y: auto;">
+          <q-input
             v-model="editingTheme.name"
             label="Theme Name"
-            density="compact"
-            variant="outlined"
+            outlined
+            dense
             class="mb-4"
           />
-          <v-row dense>
-            <v-col
+          <div class="row q-col-gutter-x-sm q-col-gutter-y-xs">
+            <div
               v-for="field in COLOR_FIELDS"
               :key="field.key"
-              cols="6"
+              class="col-6"
             >
               <div class="d-flex align-center mb-2">
-                <v-menu>
-                  <template #activator="{ props }">
-                    <div
-                      class="color-swatch mr-2"
-                      :style="{ backgroundColor: editingTheme.colors[field.key] }"
-                      v-bind="props"
+                <div
+                  class="color-swatch mr-2"
+                  :style="{ backgroundColor: editingTheme.colors[field.key] }"
+                >
+                  <q-menu>
+                    <q-color
+                      :model-value="editingTheme.colors[field.key]"
+                      no-header
+                      no-footer
+                      default-view="palette"
+                      format-model="hex"
+                      @update:model-value="(v: string | null) => editingTheme.colors[field.key] = v ?? ''"
                     />
-                  </template>
-                  <v-color-picker
-                    :model-value="editingTheme.colors[field.key]"
-                    mode="hex"
-                    hide-inputs
-                    @update:model-value="(v: string) => editingTheme.colors[field.key] = v"
-                  />
-                </v-menu>
-                <div class="flex-grow-1">
-                  <v-text-field
-                    v-model="editingTheme.colors[field.key]"
-                    :label="field.label"
-                    density="compact"
-                    variant="plain"
-                    hide-details
-                    class="color-input"
-                  />
+                  </q-menu>
                 </div>
+                <q-input
+                  v-model="editingTheme.colors[field.key]"
+                  :label="field.label"
+                  borderless
+                  dense
+                  class="color-input flex-grow-1"
+                />
               </div>
-            </v-col>
-          </v-row>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="editDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="saveEditingTheme">Save</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" @click="editDialog = false" />
+          <q-btn flat color="primary" label="Save" @click="saveEditingTheme" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- Delete confirm dialog -->
-    <v-dialog :model-value="!!deleteConfirmId" max-width="360" @update:model-value="deleteConfirmId = null">
-      <v-card>
-        <v-card-title>Delete Theme?</v-card-title>
-        <v-card-text>This action cannot be undone.</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="deleteConfirmId = null">Cancel</v-btn>
-          <v-btn color="error" @click="() => deleteConfirmId && confirmDelete(deleteConfirmId)">
-            Delete
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <q-dialog
+      :model-value="!!deleteConfirmId"
+      @update:model-value="deleteConfirmId = null"
+    >
+      <q-card class="zen-card" style="width: 360px; max-width: 90vw;">
+        <q-card-section><div class="text-subtitle-2">Delete Theme?</div></q-card-section>
+        <q-card-section>This action cannot be undone.</q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" @click="deleteConfirmId = null" />
+          <q-btn
+            flat
+            color="negative"
+            label="Delete"
+            @click="() => deleteConfirmId && confirmDelete(deleteConfirmId)"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -210,15 +213,21 @@ async function confirmDelete(id: string): Promise<void> {
   width: 24px;
   height: 24px;
   border-radius: 4px;
-  border: 1px solid rgba(var(--v-border-color), 0.3);
+  border: 1px solid var(--zen-border);
   cursor: pointer;
   flex-shrink: 0;
+  position: relative;
 }
 
-.color-input :deep(.v-field__input) {
+.color-input :deep(.q-field__native) {
   font-family: monospace;
   font-size: 12px;
   padding: 0;
   min-height: unset;
+}
+
+.zen-theme-active {
+  background: rgba(var(--zen-primary-rgb), 0.12);
+  color: var(--zen-primary);
 }
 </style>

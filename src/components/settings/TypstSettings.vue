@@ -19,7 +19,7 @@ onMounted(async () => {
     Typst is bundled directly into Zenypst — no external CLI is required.
   </p>
   <div v-if="version" class="d-flex align-center gap-2 mt-4">
-    <v-icon size="16" color="success">mdi-check-circle</v-icon>
+    <q-icon name="mdi-check-circle" size="16px" color="positive" />
     <span class="text-caption">{{ version }}</span>
   </div>
 </template>

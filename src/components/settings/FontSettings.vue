@@ -86,11 +86,12 @@ async function selectFont(font: string): Promise<void> {
   await settingsStore.update("fontFamily", font);
 }
 
-async function onInput(value: string): Promise<void> {
-  fontInput.value = value;
-  fontQuery.value = value;
+async function onInput(value: string | number | null): Promise<void> {
+  const v = value == null ? "" : String(value);
+  fontInput.value = v;
+  fontQuery.value = v;
   showList.value = true;
-  await settingsStore.update("fontFamily", value);
+  await settingsStore.update("fontFamily", v);
 }
 
 function onFallbackFocus() {
@@ -114,15 +115,18 @@ async function selectFallbackFont(font: string): Promise<void> {
   await settingsStore.update("fontFamilyFallback", font);
 }
 
-async function onFallbackInput(value: string): Promise<void> {
-  fallbackInput.value = value;
-  fallbackQuery.value = value;
+async function onFallbackInput(value: string | number | null): Promise<void> {
+  const v = value == null ? "" : String(value);
+  fallbackInput.value = v;
+  fallbackQuery.value = v;
   showFallbackList.value = true;
-  await settingsStore.update("fontFamilyFallback", value);
+  await settingsStore.update("fontFamilyFallback", v);
 }
 
-async function updateSize(value: number): Promise<void> {
-  const clamped = Math.max(8, Math.min(32, value));
+async function updateSize(value: string | number | null): Promise<void> {
+  const num = Number(value);
+  if (Number.isNaN(num)) return;
+  const clamped = Math.max(8, Math.min(32, num));
   await settingsStore.update("fontSize", clamped);
 }
 
@@ -140,18 +144,17 @@ async function toggleWordWrap(): Promise<void> {
     <p class="text-subtitle-2 mb-4">Font Settings</p>
 
     <div class="font-picker mb-4">
-      <v-text-field
+      <q-input
         :model-value="fontInput"
         label="Font Family"
-        density="compact"
-        variant="outlined"
-        hide-details
+        outlined
+        dense
         autocomplete="off"
         @focus="onFocus"
         @blur="onBlur"
         @update:model-value="onInput"
       />
-      <div v-if="showList && filteredFonts.length" class="font-list elevation-2">
+      <div v-if="showList && filteredFonts.length" class="font-list">
         <div
           v-for="font in filteredFonts"
           :key="font"
@@ -165,18 +168,17 @@ async function toggleWordWrap(): Promise<void> {
     </div>
 
     <div class="font-picker mb-4">
-      <v-text-field
+      <q-input
         :model-value="fallbackInput"
         label="Fallback Font"
-        density="compact"
-        variant="outlined"
-        hide-details
+        outlined
+        dense
         autocomplete="off"
         @focus="onFallbackFocus"
         @blur="onFallbackBlur"
         @update:model-value="onFallbackInput"
       />
-      <div v-if="showFallbackList && filteredFallbackFonts.length" class="font-list elevation-2">
+      <div v-if="showFallbackList && filteredFallbackFonts.length" class="font-list">
         <div
           v-for="font in filteredFallbackFonts"
           :key="font"
@@ -189,33 +191,32 @@ async function toggleWordWrap(): Promise<void> {
       </div>
     </div>
 
-    <v-text-field
+    <q-input
       :model-value="settingsStore.settings.fontSize"
       label="Font Size (px)"
       type="number"
-      density="compact"
-      variant="outlined"
+      outlined
+      dense
       :min="8"
       :max="32"
-      hide-details
       class="mb-4"
-      @update:model-value="(v) => updateSize(Number(v))"
+      @update:model-value="updateSize"
     />
 
-    <v-switch
+    <q-toggle
       :model-value="settingsStore.settings.showLineNumbers"
       label="Show Line Numbers"
-      density="compact"
-      hide-details
+      dense
       class="mb-2"
       @update:model-value="toggleLineNumbers"
     />
 
-    <v-switch
+    <br />
+
+    <q-toggle
       :model-value="settingsStore.settings.wordWrap"
       label="Word Wrap"
-      density="compact"
-      hide-details
+      dense
       @update:model-value="toggleWordWrap"
     />
   </div>
@@ -232,11 +233,12 @@ async function toggleWordWrap(): Promise<void> {
   right: 0;
   top: 100%;
   z-index: 100;
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: var(--zen-surface);
+  border: 1px solid var(--zen-border);
   border-radius: 4px;
   max-height: 200px;
   overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .font-list-item {
@@ -246,6 +248,6 @@ async function toggleWordWrap(): Promise<void> {
 }
 
 .font-list-item:hover {
-  background: rgba(var(--v-theme-on-surface), 0.08);
+  background: rgba(var(--zen-on-surface-rgb), 0.08);
 }
 </style>

@@ -3,7 +3,6 @@ import { ref, computed, nextTick } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
-import { useContextMenu } from "@/composables/useContextMenu";
 import { ensureTypExtension } from "@/utils/path";
 import TemplatePickerDialog from "@/components/template/TemplatePickerDialog.vue";
 import type { FileNode, Template } from "@/types";
@@ -14,7 +13,6 @@ const emit = defineEmits<{ (e: "open-file", path: string): void }>();
 const fileTreeStore = useFileTreeStore();
 const fileOps = useFileOps();
 
-const ctxMenu = useContextMenu();
 const deleteDialog = ref(false);
 const newFileDialog = ref(false);
 const newFileValue = ref("");
@@ -45,10 +43,10 @@ const fileIcon = computed(() => {
 });
 
 const fileIconColor = computed(() => {
-  if (props.node.isDir) return "medium-emphasis";
+  if (props.node.isDir) return "grey-6";
   const ext = props.node.extension;
   if (ext === "typ") return "primary";
-  if (ext === "pdf") return "error";
+  if (ext === "pdf") return "negative";
   return "";
 });
 
@@ -160,18 +158,17 @@ async function confirmNewFolder(): Promise<void> {
       :style="{ '--depth': itemDepth }"
       @click="handleClick"
       @dblclick.stop.prevent="startInlineRename"
-      @contextmenu="ctxMenu.show"
     >
       <!-- Expand arrow for directories -->
-      <v-icon
+      <q-icon
         v-if="node.isDir"
-        size="14"
+        size="14px"
         class="mr-1"
-        :icon="fileTreeStore.isExpanded(node.path) ? 'mdi-chevron-down' : 'mdi-chevron-right'"
+        :name="fileTreeStore.isExpanded(node.path) ? 'mdi-chevron-down' : 'mdi-chevron-right'"
       />
       <span v-else class="mr-1" style="width: var(--tree-indent); display: inline-block;" />
 
-      <v-icon size="14" :icon="fileIcon" :color="fileIconColor" class="mr-1" />
+      <q-icon size="14px" :name="fileIcon" :color="fileIconColor" class="mr-1" />
 
       <!-- Inline rename input or static label -->
       <input
@@ -190,6 +187,31 @@ async function confirmNewFolder(): Promise<void> {
         v-else
         class="file-name text-body-2"
       >{{ node.name }}</span>
+
+      <!-- Context menu attached to the row -->
+      <q-menu touch-position context-menu>
+        <q-list dense class="zen-menu-list">
+          <template v-if="node.isDir">
+            <q-item clickable v-close-popup @click="startNewFile">
+              <q-item-section avatar><q-icon name="mdi-file-plus-outline" size="16px" /></q-item-section>
+              <q-item-section>New File</q-item-section>
+            </q-item>
+            <q-item clickable v-close-popup @click="startNewFolder">
+              <q-item-section avatar><q-icon name="mdi-folder-plus-outline" size="16px" /></q-item-section>
+              <q-item-section>New Folder</q-item-section>
+            </q-item>
+            <q-separator />
+          </template>
+          <q-item clickable v-close-popup @click="deleteDialog = true">
+            <q-item-section avatar><q-icon name="mdi-delete" size="16px" /></q-item-section>
+            <q-item-section>Delete</q-item-section>
+          </q-item>
+          <q-item clickable v-close-popup @click="openInFileManager">
+            <q-item-section avatar><q-icon name="mdi-folder-open" size="16px" /></q-item-section>
+            <q-item-section>Reveal in File Manager</q-item-section>
+          </q-item>
+        </q-list>
+      </q-menu>
     </div>
 
     <!-- Children (if directory and expanded) -->
@@ -203,71 +225,44 @@ async function confirmNewFolder(): Promise<void> {
       />
     </template>
 
-    <!-- Context menu: folders only show New File / New Folder -->
-    <v-menu
-      v-model="ctxMenu.visible.value"
-      :style="{ left: `${ctxMenu.x.value}px`, top: `${ctxMenu.y.value}px` }"
-    >
-      <v-list density="compact">
-        <template v-if="node.isDir">
-          <v-list-item
-            prepend-icon="mdi-file-plus-outline"
-            title="New File"
-            @click="startNewFile"
-          />
-          <v-list-item
-            prepend-icon="mdi-folder-plus-outline"
-            title="New Folder"
-            @click="startNewFolder"
-          />
-          <v-divider />
-        </template>
-        <v-list-item
-          prepend-icon="mdi-delete"
-          title="Delete"
-          @click="deleteDialog = true"
-        />
-        <v-list-item
-          prepend-icon="mdi-folder-open"
-          title="Reveal in File Manager"
-          @click="openInFileManager"
-        />
-      </v-list>
-    </v-menu>
-
     <!-- New File dialog (folder context) -->
-    <v-dialog v-model="newFileDialog" max-width="400">
-      <v-card>
-        <v-card-title>New File</v-card-title>
-        <v-card-text>
-          <v-text-field
+    <q-dialog v-model="newFileDialog">
+      <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
+        <q-card-section><div class="text-subtitle-2">New File</div></q-card-section>
+        <q-card-section>
+          <q-input
             v-model="newFileValue"
             label="File name"
+            outlined
+            dense
             autofocus
             @keyup.enter="confirmNewFile"
           />
-          <v-chip
+          <q-chip
             v-if="newFileTemplate"
-            size="small"
-            prepend-icon="mdi-file-document-outline"
-            closable
-            @click:close="newFileTemplate = null"
+            removable
+            dense
+            class="q-mt-sm"
+            icon="mdi-file-document-outline"
+            @remove="newFileTemplate = null"
           >
             {{ newFileTemplate.name }}
-          </v-chip>
-        </v-card-text>
-        <v-card-actions>
-          <v-btn
-            variant="text"
-            prepend-icon="mdi-file-document-multiple-outline"
+          </q-chip>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            no-caps
+            icon="mdi-file-document-multiple-outline"
+            label="From Template"
             @click="newFileTemplatePicker = true"
-          >From Template</v-btn>
-          <v-spacer />
-          <v-btn @click="newFileDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="confirmNewFile">Create</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+          />
+          <q-space />
+          <q-btn flat label="Cancel" @click="newFileDialog = false" />
+          <q-btn flat color="primary" label="Create" @click="confirmNewFile" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- Template picker for new file -->
     <TemplatePickerDialog
@@ -276,39 +271,39 @@ async function confirmNewFolder(): Promise<void> {
     />
 
     <!-- New Folder dialog (folder context) -->
-    <v-dialog v-model="newFolderDialog" max-width="400">
-      <v-card>
-        <v-card-title>New Folder</v-card-title>
-        <v-card-text>
-          <v-text-field
+    <q-dialog v-model="newFolderDialog">
+      <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
+        <q-card-section><div class="text-subtitle-2">New Folder</div></q-card-section>
+        <q-card-section>
+          <q-input
             v-model="newFolderValue"
             label="Folder name"
+            outlined
+            dense
             autofocus
             @keyup.enter="confirmNewFolder"
           />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="newFolderDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="confirmNewFolder">Create</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" @click="newFolderDialog = false" />
+          <q-btn flat color="primary" label="Create" @click="confirmNewFolder" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- Delete confirm dialog -->
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card>
-        <v-card-title>Delete "{{ node.name }}"?</v-card-title>
-        <v-card-text>
+    <q-dialog v-model="deleteDialog">
+      <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
+        <q-card-section><div class="text-subtitle-2">Delete "{{ node.name }}"?</div></q-card-section>
+        <q-card-section>
           This action cannot be undone.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="deleteDialog = false">Cancel</v-btn>
-          <v-btn color="error" @click="confirmDelete">Delete</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" @click="deleteDialog = false" />
+          <q-btn flat color="negative" label="Delete" @click="confirmDelete" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -325,7 +320,7 @@ async function confirmNewFolder(): Promise<void> {
 }
 
 .file-tree-item:hover {
-  background: rgba(var(--v-theme-on-surface), 0.08);
+  background: rgba(var(--zen-on-surface-rgb), 0.08);
 }
 
 .file-name {
@@ -337,7 +332,7 @@ async function confirmNewFolder(): Promise<void> {
 
 .file-name-input {
   background: transparent;
-  border: 1px solid rgb(var(--v-theme-primary));
+  border: 1px solid var(--zen-primary);
   border-radius: 2px;
   color: inherit;
   font-size: var(--ui-font-size-sm);

@@ -185,19 +185,28 @@ watch(scale, (s) => {
   <div class="pdf-viewer">
     <!-- Toolbar -->
     <div class="pdf-toolbar d-flex align-center px-2">
-      <v-btn icon size="x-small" variant="text" @click="scale = Math.max(0.25, Math.round((scale - 0.25) * 10) / 10)">
-        <v-icon>mdi-magnify-minus-outline</v-icon>
-      </v-btn>
+      <q-btn
+        dense
+        flat
+        round
+        size="xs"
+        icon="mdi-magnify-minus-outline"
+        @click="scale = Math.max(0.25, Math.round((scale - 0.25) * 10) / 10)"
+      />
       <span class="text-caption mx-2">{{ Math.round(scale * 100) }}%</span>
-      <v-btn icon size="x-small" variant="text" @click="scale = Math.min(4, Math.round((scale + 0.25) * 10) / 10)">
-        <v-icon>mdi-magnify-plus-outline</v-icon>
-      </v-btn>
-      <v-spacer />
-      <v-progress-circular
+      <q-btn
+        dense
+        flat
+        round
+        size="xs"
+        icon="mdi-magnify-plus-outline"
+        @click="scale = Math.min(4, Math.round((scale + 0.25) * 10) / 10)"
+      />
+      <q-space />
+      <q-spinner
         v-if="previewStore.status === 'compiling'"
-        indeterminate
-        size="16"
-        width="2"
+        size="16px"
+        :thickness="2"
         color="primary"
         class="mr-1"
       />
@@ -212,7 +221,7 @@ watch(scale, (s) => {
       class="pdf-empty"
     >
       <div class="pdf-empty__top" />
-      <v-icon size="64" color="medium-emphasis">mdi-file-pdf-box</v-icon>
+      <q-icon name="mdi-file-pdf-box" size="64px" color="grey-6" />
       <p class="text-medium-emphasis mt-4">PDF preview will appear here</p>
       <div class="pdf-empty__bottom" />
     </div>
@@ -226,7 +235,7 @@ watch(scale, (s) => {
 .pdf-viewer {
   position: absolute;
   inset: 0;
-  background: rgb(var(--v-theme-surface-variant));
+  background: var(--zen-surface-variant);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -235,24 +244,24 @@ watch(scale, (s) => {
 .pdf-toolbar {
   height: var(--panel-header-height);
   min-height: var(--panel-header-height);
-  background: rgb(var(--v-theme-surface));
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: var(--zen-surface);
+  border-bottom: 1px solid var(--zen-border);
   flex-shrink: 0;
 }
 
 .pdf-pages {
   flex: 1 1 0;
   overflow-y: auto;
-  background: rgb(var(--v-theme-surface-variant));
+  background: var(--zen-surface-variant);
   scrollbar-width: thin;
-  scrollbar-color: rgba(var(--v-border-color), 0.4) transparent;
+  scrollbar-color: var(--zen-border) transparent;
 }
 
 .pdf-pages::-webkit-scrollbar {
   width: var(--scrollbar-size);
 }
 .pdf-pages::-webkit-scrollbar-thumb {
-  background: rgba(var(--v-border-color), 0.4);
+  background: var(--zen-border);
   border-radius: var(--scrollbar-radius);
 }
 .pdf-pages::-webkit-scrollbar-track {

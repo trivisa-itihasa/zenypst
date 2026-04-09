@@ -27,7 +27,7 @@ const statusColor = computed(() => {
   <div v-if="previewStore.status === 'error'" class="compile-status-overlay">
     <div class="compile-error-panel pa-3">
       <div class="d-flex align-center mb-2">
-        <v-icon color="error" class="mr-2">mdi-alert-circle</v-icon>
+        <q-icon name="mdi-alert-circle" color="negative" class="mr-2" />
         <span class="text-subtitle-2 text-error">Compilation Errors</span>
       </div>
       <div
@@ -53,7 +53,7 @@ const statusColor = computed(() => {
         class="warning-item mb-2"
       >
         <div class="text-caption text-warning font-weight-medium">
-          <v-icon size="12" class="mr-1">mdi-alert</v-icon>
+          <q-icon name="mdi-alert" size="12px" class="mr-1" />
           <template v-if="warn.file">{{ warn.file }}<template v-if="warn.line">:{{ warn.line }}</template><template v-if="warn.column">:{{ warn.column }}</template> — </template>{{ warn.message }}
         </div>
         <div v-if="warn.sourceLine" class="source-snippet mt-1">
@@ -69,7 +69,7 @@ const statusColor = computed(() => {
   </div>
 
   <div v-else-if="previewStore.status === 'compiling'" class="compile-indicator pa-2">
-    <v-progress-linear indeterminate color="info" height="2" />
+    <q-linear-progress indeterminate color="info" size="2px" />
   </div>
 </template>
 
@@ -84,8 +84,8 @@ const statusColor = computed(() => {
 }
 
 .compile-error-panel {
-  background: rgba(var(--v-theme-surface), 0.95);
-  border-top: 2px solid rgb(var(--v-theme-error));
+  background: rgba(var(--zen-on-surface-rgb), 0.06);
+  border-top: 2px solid var(--zen-error);
   max-height: 200px;
   overflow-y: auto;
   backdrop-filter: blur(4px);
@@ -104,8 +104,8 @@ const statusColor = computed(() => {
 }
 
 .source-snippet {
-  background: rgba(var(--v-theme-surface-variant), 0.5);
-  border-left: 2px solid rgb(var(--v-theme-error));
+  background: rgba(var(--zen-on-surface-rgb), 0.06);
+  border-left: 2px solid var(--zen-error);
   padding: 2px 6px;
   font-family: monospace;
   font-size: 11px;
@@ -114,16 +114,16 @@ const statusColor = computed(() => {
 }
 
 .warning-item .source-snippet {
-  border-left-color: rgb(var(--v-theme-warning));
+  border-left-color: var(--zen-warning);
 }
 
 .caret-line {
-  color: rgb(var(--v-theme-error));
+  color: var(--zen-error);
   white-space: pre;
 }
 
 .hint-text {
-  color: rgb(var(--v-theme-info));
+  color: var(--zen-info);
   font-family: monospace;
 }
 </style>

@@ -210,17 +210,15 @@ async function togglePreview(): Promise<void> {
       v-if="typstNotFoundBar"
       class="typst-not-found-bar d-flex align-center px-3"
     >
-      <v-icon size="14" color="warning" class="mr-2">mdi-alert</v-icon>
+      <q-icon name="mdi-alert" size="14px" color="warning" class="mr-2" />
       <span class="text-caption">
         <strong>Typst CLI not found.</strong>
         Install from
         <a href="https://typst.app" target="_blank" rel="noopener">typst.app</a>
         and add to PATH.
       </span>
-      <v-spacer />
-      <v-btn icon size="x-small" variant="text" @click="typstNotFoundBar = false">
-        <v-icon size="14">mdi-close</v-icon>
-      </v-btn>
+      <q-space />
+      <q-btn dense flat round size="xs" icon="mdi-close" @click="typstNotFoundBar = false" />
     </div>
 
     <div class="app-body" ref="bodyRef">
@@ -281,21 +279,19 @@ async function togglePreview(): Promise<void> {
       @selected="handleTemplateSelected"
     />
 
-    <v-dialog v-model="templateManagerDialog" max-width="640" scrollable>
-      <v-card>
-        <v-card-title class="d-flex align-center">
-          Template Manager
-          <v-spacer />
-          <v-btn icon variant="text" @click="templateManagerDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-card-title>
-        <v-divider />
-        <v-card-text>
+    <q-dialog v-model="templateManagerDialog">
+      <q-card class="zen-card" style="width: 640px; max-width: 90vw;">
+        <q-card-section class="row items-center q-pa-md">
+          <div class="text-subtitle-2">Template Manager</div>
+          <q-space />
+          <q-btn flat dense round icon="mdi-close" @click="templateManagerDialog = false" />
+        </q-card-section>
+        <q-separator />
+        <q-card-section>
           <TemplateManager />
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -348,8 +344,8 @@ async function togglePreview(): Promise<void> {
   right: 0;
   top: 0;
   height: var(--panel-header-height);
-  background: rgb(var(--v-theme-surface));
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: var(--zen-surface);
+  border-bottom: 1px solid var(--zen-border);
 }
 
 /* Vertical separator line — hidden at rest, visible on hover/drag */
@@ -368,19 +364,19 @@ async function togglePreview(): Promise<void> {
 .splitter:hover::after,
 .splitter--active::after {
   width: 3px;
-  background: rgba(var(--v-theme-on-surface), 0.4);
+  background: rgba(var(--zen-on-surface-rgb), 0.4);
 }
 
 .typst-not-found-bar {
   height: var(--toolbar-height);
   min-height: var(--toolbar-height);
-  background: rgba(var(--v-theme-warning), 0.15);
-  border-bottom: 1px solid rgba(var(--v-theme-warning), 0.4);
+  background: rgba(var(--zen-warning-rgb), 0.15);
+  border-bottom: 1px solid rgba(var(--zen-warning-rgb), 0.4);
   flex-shrink: 0;
   font-size: var(--ui-font-size-sm);
 
   a {
-    color: rgb(var(--v-theme-warning));
+    color: var(--zen-warning);
   }
 }
 </style>

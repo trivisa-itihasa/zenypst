@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Notify } from "quasar";
 import appIconUrl from "@/assets/icons/icon-str.svg";
 import { useFileOps } from "@/composables/useFileOps";
 import { useCompiler } from "@/composables/useCompiler";
@@ -42,35 +43,24 @@ async function closeWindow(): Promise<void> {
 }
 
 const aboutDialog = ref(false);
-const fileMenu = ref(false);
 
-const snackbar = ref(false);
-const snackbarText = ref("");
-const snackbarColor = ref("error");
-
-function showSnackbar(text: string, color = "error"): void {
-  snackbarText.value = text;
-  snackbarColor.value = color;
-  snackbar.value = true;
+function notify(message: string, type: "negative" | "positive" = "negative"): void {
+  Notify.create({ message, type, position: "bottom", timeout: 4000 });
 }
 
 async function handleNewFile(): Promise<void> {
-  fileMenu.value = false;
   emit("new-file");
 }
 
 async function handleOpenFile(): Promise<void> {
-  fileMenu.value = false;
   await fileOps.openFileDialog();
 }
 
 async function handleOpenFolder(): Promise<void> {
-  fileMenu.value = false;
   await fileOps.openFolderDialog();
 }
 
 async function handleSave(): Promise<void> {
-  fileMenu.value = false;
   await fileOps.saveActiveFile();
   if (settingsStore.settings.previewMode === "on_save") {
     await triggerCompile();
@@ -78,12 +68,10 @@ async function handleSave(): Promise<void> {
 }
 
 async function handleSaveAs(): Promise<void> {
-  fileMenu.value = false;
   await fileOps.saveAsActiveFile();
 }
 
 async function handleExportPdf(): Promise<void> {
-  fileMenu.value = false;
   const tab = editorStore.activeTab;
   if (!tab) return;
 
@@ -95,13 +83,13 @@ async function handleExportPdf(): Promise<void> {
   try {
     const result = await exportPdf(tab.content, root, outputPath);
     if (result.success) {
-      showSnackbar("PDF exported successfully.", "success");
+      notify("PDF exported successfully.", "positive");
     } else {
       const msg = result.errors.map((e) => e.message).join("; ");
-      showSnackbar("Export failed: " + msg, "error");
+      notify("Export failed: " + msg);
     }
   } catch (err) {
-    showSnackbar("Export failed: " + String(err), "error");
+    notify("Export failed: " + String(err));
   }
 }
 </script>
@@ -114,84 +102,86 @@ async function handleExportPdf(): Promise<void> {
       </button>
     </div>
 
-    <v-menu v-model="fileMenu" :close-on-content-click="true" :transition="false">
-      <template #activator="{ props }">
-        <v-btn variant="text" size="small" v-bind="props" class="menu-btn">File</v-btn>
-      </template>
-      <v-list density="compact">
-        <v-list-item prepend-icon="mdi-file-plus" @click="handleNewFile">
-          <div class="menu-item-row"><span>New File</span><span class="menu-shortcut">Ctrl+N</span></div>
-        </v-list-item>
-        <v-divider />
-        <v-list-item prepend-icon="mdi-file-outline" @click="handleOpenFile">
-          <div class="menu-item-row"><span>Open File…</span><span class="menu-shortcut">Ctrl+O</span></div>
-        </v-list-item>
-        <v-list-item prepend-icon="mdi-folder-open" @click="handleOpenFolder">
-          <div class="menu-item-row"><span>Open Folder…</span><span class="menu-shortcut">Ctrl+Shift+O</span></div>
-        </v-list-item>
-        <v-divider />
-        <v-list-item prepend-icon="mdi-content-save" :disabled="!editorStore.activeTab" @click="handleSave">
-          <div class="menu-item-row"><span>Save</span><span class="menu-shortcut">Ctrl+S</span></div>
-        </v-list-item>
-        <v-list-item prepend-icon="mdi-content-save-edit" :disabled="!editorStore.activeTab" @click="handleSaveAs">
-          <div class="menu-item-row"><span>Save As…</span></div>
-        </v-list-item>
-        <v-divider />
-        <v-list-item prepend-icon="mdi-file-pdf-box" :disabled="!editorStore.activeTab" @click="handleExportPdf">
-          <div class="menu-item-row"><span>Export PDF…</span></div>
-        </v-list-item>
-        <v-divider />
-        <v-list-item prepend-icon="mdi-file-document-multiple" @click="emit('open-templates')">
-          <div class="menu-item-row"><span>Manage Templates</span></div>
-        </v-list-item>
-      </v-list>
-    </v-menu>
+    <q-btn flat dense no-caps class="menu-btn" label="File">
+      <q-menu auto-close :offset="[0, 4]">
+        <q-list dense class="zen-menu-list">
+          <q-item clickable @click="handleNewFile">
+            <q-item-section avatar><q-icon name="mdi-file-plus" size="16px" /></q-item-section>
+            <q-item-section>New File</q-item-section>
+            <q-item-section side><span class="menu-shortcut">Ctrl+N</span></q-item-section>
+          </q-item>
+          <q-separator />
+          <q-item clickable @click="handleOpenFile">
+            <q-item-section avatar><q-icon name="mdi-file-outline" size="16px" /></q-item-section>
+            <q-item-section>Open File…</q-item-section>
+            <q-item-section side><span class="menu-shortcut">Ctrl+O</span></q-item-section>
+          </q-item>
+          <q-item clickable @click="handleOpenFolder">
+            <q-item-section avatar><q-icon name="mdi-folder-open" size="16px" /></q-item-section>
+            <q-item-section>Open Folder…</q-item-section>
+            <q-item-section side><span class="menu-shortcut">Ctrl+Shift+O</span></q-item-section>
+          </q-item>
+          <q-separator />
+          <q-item clickable :disable="!editorStore.activeTab" @click="handleSave">
+            <q-item-section avatar><q-icon name="mdi-content-save" size="16px" /></q-item-section>
+            <q-item-section>Save</q-item-section>
+            <q-item-section side><span class="menu-shortcut">Ctrl+S</span></q-item-section>
+          </q-item>
+          <q-item clickable :disable="!editorStore.activeTab" @click="handleSaveAs">
+            <q-item-section avatar><q-icon name="mdi-content-save-edit" size="16px" /></q-item-section>
+            <q-item-section>Save As…</q-item-section>
+          </q-item>
+          <q-separator />
+          <q-item clickable :disable="!editorStore.activeTab" @click="handleExportPdf">
+            <q-item-section avatar><q-icon name="mdi-file-pdf-box" size="16px" /></q-item-section>
+            <q-item-section>Export PDF…</q-item-section>
+          </q-item>
+          <q-separator />
+          <q-item clickable @click="emit('open-templates')">
+            <q-item-section avatar><q-icon name="mdi-file-document-multiple" size="16px" /></q-item-section>
+            <q-item-section>Manage Templates</q-item-section>
+          </q-item>
+        </q-list>
+      </q-menu>
+    </q-btn>
 
-    <v-spacer />
+    <q-space />
 
     <template v-if="isTauri">
       <button class="winctl-btn" @click="minimize" title="最小化">
-        <v-icon size="14">mdi-minus</v-icon>
+        <q-icon name="mdi-minus" size="14px" />
       </button>
       <button class="winctl-btn" @click="toggleMaximize" :title="isMaximized ? '元のサイズに戻す' : '最大化'">
-        <v-icon size="14">{{ isMaximized ? 'mdi-window-restore' : 'mdi-window-maximize' }}</v-icon>
+        <q-icon :name="isMaximized ? 'mdi-window-restore' : 'mdi-window-maximize'" size="14px" />
       </button>
       <button class="winctl-btn winctl-btn--close" @click="closeWindow" title="閉じる">
-        <v-icon size="14">mdi-close</v-icon>
+        <q-icon name="mdi-close" size="14px" />
       </button>
     </template>
   </div>
 
-  <v-dialog v-model="aboutDialog" max-width="400">
-    <v-card>
-      <v-card-title class="d-flex align-center">
+  <q-dialog v-model="aboutDialog">
+    <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
+      <q-card-section class="row items-center q-pa-md">
         <img :src="appIconUrl" class="about-icon" alt="" />
-        Zenypst
-      </v-card-title>
-      <v-card-text>
+        <div class="text-subtitle-2">Zenypst</div>
+      </q-card-section>
+      <q-card-section>
         <p class="mb-2">A desktop Typst editor with live PDF preview.</p>
         <p class="text-caption text-medium-emphasis">Version 0.1.0</p>
-        <p class="text-caption text-medium-emphasis">Built with Tauri, Vue 3, Vuetify, and CodeMirror 6.</p>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn @click="aboutDialog = false">Close</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="4000" location="bottom">
-    {{ snackbarText }}
-    <template #actions>
-      <v-btn variant="text" @click="snackbar = false">Close</v-btn>
-    </template>
-  </v-snackbar>
+        <p class="text-caption text-medium-emphasis">Built with Tauri, Vue 3, Quasar, and CodeMirror 6.</p>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Close" @click="aboutDialog = false" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <style scoped>
 .toolbar {
-  background: rgb(var(--v-theme-surface));
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: var(--zen-surface);
+  border-bottom: 1px solid var(--zen-border);
   height: var(--toolbar-height);
   flex-shrink: 0;
   overflow: hidden;
@@ -220,7 +210,7 @@ async function handleExportPdf(): Promise<void> {
 }
 
 .icon-btn:hover {
-  background: rgba(var(--v-theme-on-surface), 0.08);
+  background: rgba(var(--zen-on-surface-rgb), 0.08);
 }
 
 .app-icon {
@@ -236,44 +226,19 @@ async function handleExportPdf(): Promise<void> {
 }
 
 .menu-btn {
-  height: 28px !important;
-  border-radius: 6px !important;
+  height: 28px;
+  border-radius: 6px;
   font-size: var(--ui-font-size-sm);
   min-width: 0;
   padding: 0 10px;
 }
 
 .menu-btn:hover {
-  background: rgba(var(--v-theme-on-surface), 0.08) !important;
-}
-
-:deep(.v-list-item__prepend) {
-  margin-inline-end: -16px;
-}
-
-:deep(.v-list-item) {
-  min-height: 28px !important;
-  padding-top: 2px !important;
-  padding-bottom: 2px !important;
-  padding-inline-start: 8px !important;
-}
-
-:deep(.v-list) {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-.menu-item-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  width: 100%;
-  font-size: var(--ui-font-size-sm);
+  background: rgba(var(--zen-on-surface-rgb), 0.08);
 }
 
 .menu-shortcut {
-  color: rgba(var(--v-theme-on-surface), 0.45);
+  color: rgba(var(--zen-on-surface-rgb), 0.45);
   font-size: 0.75rem;
   white-space: nowrap;
   margin-left: auto;
@@ -288,19 +253,34 @@ async function handleExportPdf(): Promise<void> {
   border: none;
   background: transparent;
   cursor: pointer;
-  color: rgba(var(--v-theme-on-surface), 0.7);
+  color: rgba(var(--zen-on-surface-rgb), 0.7);
   border-radius: 0;
   flex-shrink: 0;
   transition: background 0.1s, color 0.1s;
 }
 
 .winctl-btn:hover {
-  background: rgba(var(--v-theme-on-surface), 0.12);
-  color: rgba(var(--v-theme-on-surface), 1);
+  background: rgba(var(--zen-on-surface-rgb), 0.12);
+  color: rgba(var(--zen-on-surface-rgb), 1);
 }
 
 .winctl-btn--close:hover {
   background: #e81123;
   color: #fff;
+}
+</style>
+
+<style>
+/* Global tweaks for the menus rendered into a Quasar portal */
+.zen-menu-list .q-item {
+  min-height: 28px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 8px;
+  font-size: var(--ui-font-size-sm);
+}
+.zen-menu-list .q-item__section--avatar {
+  min-width: 24px;
+  padding-right: 4px;
 }
 </style>

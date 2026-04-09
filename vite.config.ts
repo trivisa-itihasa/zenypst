@@ -1,15 +1,19 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import vuetify from "vite-plugin-vuetify";
+import { quasar, transformAssetUrls } from "@quasar/vite-plugin";
 import { fileURLToPath, URL } from "node:url";
 
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig(async () => ({
   plugins: [
-    vue(),
-    vuetify({
-      autoImport: true,
+    vue({
+      template: { transformAssetUrls },
+    }),
+    quasar({
+      sassVariables: fileURLToPath(
+        new URL("./src/quasar-variables.sass", import.meta.url)
+      ),
     }),
   ],
   resolve: {

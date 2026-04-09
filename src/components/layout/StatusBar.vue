@@ -49,21 +49,22 @@ const previewModeLabel = computed(() => {
       {{ currentFile || "No file open" }}
     </span>
 
-    <v-spacer />
+    <q-space />
 
     <!-- Preview mode -->
     <span class="text-medium-emphasis mr-4">
-      <v-icon size="12" class="mr-1">mdi-eye</v-icon>
+      <q-icon name="mdi-eye" size="12px" class="mr-1" />
       {{ previewModeLabel }}
     </span>
 
     <!-- Compile status -->
     <span :class="compileStatusColor" class="mr-4">
-      <v-icon
+      <q-icon
         v-if="previewStore.status === 'compiling'"
-        size="12"
+        name="mdi-loading"
+        size="12px"
         class="mr-1"
-      >mdi-loading</v-icon>
+      />
       {{ compileStatusText }}
     </span>
 

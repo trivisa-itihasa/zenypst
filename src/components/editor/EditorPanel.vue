@@ -183,16 +183,26 @@ onUnmounted(() => {
     />
     <div v-else class="editor-empty">
       <div class="editor-empty__top" />
-      <v-icon size="64" color="medium-emphasis">mdi-file-document-outline</v-icon>
+      <q-icon name="mdi-file-document-outline" size="64px" color="grey-6" />
       <p class="text-medium-emphasis mt-4">Open a file to start editing</p>
       <div class="editor-empty__bottom">
         <div class="editor-empty__actions">
-          <v-btn variant="text" prepend-icon="mdi-file-plus" class="empty-action-btn" @click="$emit('new-file')">
-            New File
-          </v-btn>
-          <v-btn variant="text" prepend-icon="mdi-folder-open" class="empty-action-btn" @click="$emit('open-file')">
-            Open File
-          </v-btn>
+          <q-btn
+            flat
+            no-caps
+            icon="mdi-file-plus"
+            label="New File"
+            class="empty-action-btn"
+            @click="$emit('new-file')"
+          />
+          <q-btn
+            flat
+            no-caps
+            icon="mdi-folder-open"
+            label="Open File"
+            class="empty-action-btn"
+            @click="$emit('open-file')"
+          />
         </div>
       </div>
     </div>
@@ -232,7 +242,7 @@ onUnmounted(() => {
 }
 
 .empty-action-btn {
-  justify-content: flex-start !important;
+  justify-content: flex-start;
 }
 
 .editor-panel {
@@ -257,7 +267,7 @@ onUnmounted(() => {
   overflow: auto;
   height: 100%;
   scrollbar-width: thin;
-  scrollbar-color: rgba(var(--v-border-color), 0.4) transparent;
+  scrollbar-color: var(--zen-border) transparent;
 }
 
 .editor-container :deep(.cm-scroller::-webkit-scrollbar) {
@@ -265,7 +275,7 @@ onUnmounted(() => {
   height: var(--scrollbar-size);
 }
 .editor-container :deep(.cm-scroller::-webkit-scrollbar-thumb) {
-  background: rgba(var(--v-border-color), 0.4);
+  background: var(--zen-border);
   border-radius: var(--scrollbar-radius);
 }
 .editor-container :deep(.cm-scroller::-webkit-scrollbar-track) {
@@ -273,6 +283,6 @@ onUnmounted(() => {
 }
 
 .editor-empty {
-  background: rgb(var(--v-theme-background));
+  background: var(--zen-background);
 }
 </style>

@@ -2,7 +2,6 @@
 import { ref } from "vue";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
-import { useContextMenu } from "@/composables/useContextMenu";
 import { ensureTypExtension } from "@/utils/path";
 import FileTreeItem from "./FileTreeItem.vue";
 
@@ -11,7 +10,6 @@ const emit = defineEmits<{ (e: "open-file", path: string): void }>();
 const fileTreeStore = useFileTreeStore();
 const fileOps = useFileOps();
 
-const ctxMenu = useContextMenu();
 const newFileDialog = ref(false);
 const newFileValue = ref("");
 const newFolderDialog = ref(false);
@@ -27,11 +25,6 @@ async function refreshTree(): Promise<void> {
 
 function getRootName(path: string): string {
   return path.split("/").pop() ?? path;
-}
-
-function showRootContextMenu(event: MouseEvent): void {
-  if (!fileTreeStore.rootPath) return;
-  ctxMenu.show(event);
 }
 
 function startNewFile(): void {
@@ -78,27 +71,30 @@ async function confirmNewFolder(): Promise<void> {
         </template>
         <template v-else>Explorer</template>
       </span>
-      <v-btn icon variant="text" title="Refresh" class="header-btn" @click="refreshTree">
-        <v-icon class="header-btn-icon">mdi-refresh</v-icon>
-      </v-btn>
-      <v-btn
+      <button class="header-btn" title="Refresh" @click="refreshTree">
+        <q-icon name="mdi-refresh" class="header-btn-icon" />
+      </button>
+      <button
         v-if="fileTreeStore.rootPath"
-        icon
-        variant="text"
-        title="Close Folder"
         class="header-btn"
+        title="Close Folder"
         @click="fileTreeStore.clearTree()"
       >
-        <v-icon class="header-btn-icon">mdi-folder-remove-outline</v-icon>
-      </v-btn>
-      <v-btn icon variant="text" title="Open Folder" class="header-btn" @click="openFolder">
-        <v-icon class="header-btn-icon">mdi-folder-open-outline</v-icon>
-      </v-btn>
+        <q-icon name="mdi-folder-remove-outline" class="header-btn-icon" />
+      </button>
+      <button class="header-btn" title="Open Folder" @click="openFolder">
+        <q-icon name="mdi-folder-open-outline" class="header-btn-icon" />
+      </button>
     </div>
 
     <!-- Tree content — right-click on empty space triggers root context menu -->
-    <div class="file-tree-content py-1" @contextmenu.self.prevent="showRootContextMenu">
-      <v-progress-linear v-if="fileTreeStore.isLoading" indeterminate color="primary" height="2" />
+    <div class="file-tree-content py-1">
+      <q-linear-progress
+        v-if="fileTreeStore.isLoading"
+        indeterminate
+        size="2px"
+        color="primary"
+      />
 
       <template v-if="fileTreeStore.rootPath && !fileTreeStore.isLoading">
         <FileTreeItem
@@ -115,85 +111,82 @@ async function confirmNewFolder(): Promise<void> {
         class="file-tree-empty d-flex flex-column align-center"
       >
         <div class="file-tree-empty__top" />
-        <v-icon size="64" color="medium-emphasis">mdi-folder-outline</v-icon>
+        <q-icon name="mdi-folder-outline" size="64px" color="grey-6" />
         <p class="text-medium-emphasis mt-4">Open a folder to browse files</p>
         <div class="file-tree-empty__bottom">
           <div class="file-tree-empty__actions">
-            <v-btn variant="text" prepend-icon="mdi-folder-open" class="empty-action-btn" @click="openFolder">
-              Open Folder
-            </v-btn>
+            <q-btn
+              flat
+              no-caps
+              icon="mdi-folder-open"
+              label="Open Folder"
+              class="empty-action-btn"
+              @click="openFolder"
+            />
           </div>
         </div>
       </div>
 
-      <v-alert
-        v-if="fileTreeStore.error"
-        type="error"
-        density="compact"
-        class="ma-2"
-      >
+      <div v-if="fileTreeStore.error" class="zen-alert zen-alert--error ma-2">
         {{ fileTreeStore.error }}
-      </v-alert>
+      </div>
+
+      <!-- Root-level context menu (right-click on empty space) -->
+      <q-menu touch-position context-menu>
+        <q-list dense class="zen-menu-list">
+          <q-item clickable v-close-popup @click="startNewFile">
+            <q-item-section avatar><q-icon name="mdi-file-plus-outline" size="16px" /></q-item-section>
+            <q-item-section>New File</q-item-section>
+          </q-item>
+          <q-item clickable v-close-popup @click="startNewFolder">
+            <q-item-section avatar><q-icon name="mdi-folder-plus-outline" size="16px" /></q-item-section>
+            <q-item-section>New Folder</q-item-section>
+          </q-item>
+        </q-list>
+      </q-menu>
     </div>
 
-    <!-- Root-level context menu (empty space) -->
-    <v-menu
-      v-model="ctxMenu.visible.value"
-      :style="{ left: `${ctxMenu.x.value}px`, top: `${ctxMenu.y.value}px` }"
-    >
-      <v-list density="compact">
-        <v-list-item
-          prepend-icon="mdi-file-plus-outline"
-          title="New File"
-          @click="startNewFile"
-        />
-        <v-list-item
-          prepend-icon="mdi-folder-plus-outline"
-          title="New Folder"
-          @click="startNewFolder"
-        />
-      </v-list>
-    </v-menu>
-
     <!-- New File dialog -->
-    <v-dialog v-model="newFileDialog" max-width="400">
-      <v-card>
-        <v-card-title>New File</v-card-title>
-        <v-card-text>
-          <v-text-field
+    <q-dialog v-model="newFileDialog">
+      <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
+        <q-card-section><div class="text-subtitle-2">New File</div></q-card-section>
+        <q-card-section>
+          <q-input
             v-model="newFileValue"
             label="File name"
+            outlined
+            dense
             autofocus
             @keyup.enter="confirmNewFile"
           />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="newFileDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="confirmNewFile">Create</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" @click="newFileDialog = false" />
+          <q-btn flat color="primary" label="Create" @click="confirmNewFile" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- New Folder dialog -->
-    <v-dialog v-model="newFolderDialog" max-width="400">
-      <v-card>
-        <v-card-title>New Folder</v-card-title>
-        <v-card-text>
-          <v-text-field
+    <q-dialog v-model="newFolderDialog">
+      <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
+        <q-card-section><div class="text-subtitle-2">New Folder</div></q-card-section>
+        <q-card-section>
+          <q-input
             v-model="newFolderValue"
             label="Folder name"
+            outlined
+            dense
             autofocus
             @keyup.enter="confirmNewFolder"
           />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn @click="newFolderDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="confirmNewFolder">Create</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" @click="newFolderDialog = false" />
+          <q-btn flat color="primary" label="Create" @click="confirmNewFolder" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -201,7 +194,7 @@ async function confirmNewFolder(): Promise<void> {
 .file-tree {
   position: absolute;
   inset: 0;
-  background: rgb(var(--v-theme-surface));
+  background: var(--zen-surface);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -211,26 +204,37 @@ async function confirmNewFolder(): Promise<void> {
   height: var(--panel-header-height);
   min-height: var(--panel-header-height);
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-bottom: 1px solid var(--zen-border);
 }
 
 .file-tree-content {
   flex: 1 1 0;
   overflow-y: auto;
+  position: relative;
 }
 
 .header-btn {
-  border-radius: 4px !important;
-  min-width: 0 !important;
-  width: calc(var(--panel-header-height) - 8px) !important;
-  height: calc(var(--panel-header-height) - 8px) !important;
-  padding: 0 !important;
-  margin-top: 4px !important;
-  margin-bottom: 4px !important;
+  border-radius: 4px;
+  min-width: 0;
+  width: calc(var(--panel-header-height) - 8px);
+  height: calc(var(--panel-header-height) - 8px);
+  padding: 0;
+  margin: 4px 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.header-btn :deep(.v-icon) {
-  font-size: calc(var(--panel-header-height) - 16px) !important;
+.header-btn:hover {
+  background: rgba(var(--zen-on-surface-rgb), 0.08);
+}
+
+.header-btn-icon {
+  font-size: calc(var(--panel-header-height) - 16px);
 }
 
 .file-tree-empty {
@@ -259,7 +263,7 @@ async function confirmNewFolder(): Promise<void> {
 }
 
 .empty-action-btn {
-  justify-content: flex-start !important;
+  justify-content: flex-start;
 }
 
 .root-name-label {
@@ -267,5 +271,17 @@ async function confirmNewFolder(): Promise<void> {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+.zen-alert {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: var(--ui-font-size-sm);
+}
+
+.zen-alert--error {
+  background: rgba(var(--zen-error-rgb), 0.15);
+  color: var(--zen-error);
+  border: 1px solid rgba(var(--zen-error-rgb), 0.4);
 }
 </style>
