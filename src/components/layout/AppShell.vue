@@ -152,8 +152,22 @@ onUnmounted(async () => {
   await stopWatcher();
 });
 
+function applyUiFont(): void {
+  const { fontFamily, fontFamilyFallback } = settingsStore.settings;
+  document.documentElement.style.setProperty(
+    "--ui-font-family",
+    `"${fontFamily}", "${fontFamilyFallback}", monospace`
+  );
+}
+
+watch(
+  [() => settingsStore.settings.fontFamily, () => settingsStore.settings.fontFamilyFallback],
+  applyUiFont
+);
+
 onMounted(async () => {
   await settingsStore.load();
+  applyUiFont();
   await Promise.all([loadThemes(), templateStore.loadTemplates()]);
 
   if (settingsStore.settings.lastOpenedPath) {
@@ -330,22 +344,18 @@ async function togglePreview(): Promise<void> {
   width: var(--splitter-width);
   flex-shrink: 0;
   cursor: col-resize;
-  background: transparent;
   position: relative;
   z-index: 10;
 }
 
-/* Fill header area with surface color to match adjacent panel headers,
-   and draw the connecting border line at the bottom */
+/* Wide transparent hit area so dragging works near the 0-width boundary */
 .splitter::before {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
   top: 0;
-  height: var(--panel-header-height);
-  background: var(--zen-surface);
-  border-bottom: 1px solid var(--zen-border);
+  bottom: 0;
+  left: -4px;
+  width: 8px;
 }
 
 /* Vertical separator line — hidden at rest, visible on hover/drag */
@@ -354,7 +364,7 @@ async function togglePreview(): Promise<void> {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 50%;
+  left: 0;
   transform: translateX(-50%);
   width: 1px;
   background: transparent;
