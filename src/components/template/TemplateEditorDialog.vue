@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useTemplateStore } from "@/stores/template";
 import type { Template } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+
+const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: boolean;
@@ -57,25 +60,25 @@ async function save(): Promise<void> {
     <q-card class="zen-card" style="width: 700px; max-width: 95vw;">
       <q-card-section>
         <div class="text-subtitle-2">
-          {{ template?.builtIn ? "Duplicate Template" : template?.id ? "Edit Template" : "New Template" }}
+          {{ template?.builtIn ? t('templateEditor.duplicateTemplate') : template?.id ? t('templateEditor.editTemplate') : t('templateEditor.newTemplate') }}
         </div>
       </q-card-section>
       <q-card-section style="max-height: 70vh; overflow-y: auto;">
         <q-input
           v-model="form.name"
-          label="Template Name"
+          :label="t('templateEditor.templateName')"
           outlined
           dense
           class="mb-3"
         />
         <q-input
           v-model="form.description"
-          label="Description"
+          :label="t('templateEditor.description')"
           outlined
           dense
           class="mb-3"
         />
-        <label class="text-caption mb-1">Content</label>
+        <label class="text-caption mb-1">{{ t('templateEditor.content') }}</label>
         <q-input
           v-model="form.content"
           type="textarea"
@@ -86,8 +89,8 @@ async function save(): Promise<void> {
         />
       </q-card-section>
       <q-card-actions align="right">
-        <q-btn flat label="Cancel" @click="emit('update:modelValue', false)" />
-        <q-btn flat color="primary" label="Save Template" @click="save" />
+        <q-btn flat :label="t('common.cancel')" @click="emit('update:modelValue', false)" />
+        <q-btn flat color="primary" :label="t('templateEditor.saveTemplate')" @click="save" />
       </q-card-actions>
     </q-card>
   </q-dialog>

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { useTemplateStore } from "@/stores/template";
 import type { Template } from "@/types";
 import TemplateEditorDialog from "./TemplateEditorDialog.vue";
+
+const { t } = useI18n();
 
 const templateStore = useTemplateStore();
 
@@ -33,8 +36,8 @@ async function confirmDelete(id: string): Promise<void> {
 <template>
   <div class="template-manager">
     <div class="d-flex align-center mb-4">
-      <p class="text-subtitle-2 flex-grow-1">Template Manager</p>
-      <q-btn dense outline no-caps icon="mdi-plus" label="New Template" @click="newTemplate" />
+      <p class="text-subtitle-2 flex-grow-1">{{ t('templateManager.title') }}</p>
+      <q-btn dense outline no-caps icon="mdi-plus" :label="t('templateManager.newTemplate')" @click="newTemplate" />
     </div>
 
     <q-linear-progress v-if="templateStore.isLoading" indeterminate color="primary" class="mb-2" />
@@ -56,7 +59,7 @@ async function confirmDelete(id: string): Promise<void> {
             <q-btn
               dense flat round size="sm"
               :icon="template.builtIn ? 'mdi-content-copy' : 'mdi-pencil'"
-              :title="template.builtIn ? 'Duplicate' : 'Edit'"
+              :title="template.builtIn ? t('templateManager.duplicate') : t('templateManager.edit')"
               @click="editTemplate(template)"
             />
             <q-btn
@@ -82,14 +85,14 @@ async function confirmDelete(id: string): Promise<void> {
       @update:model-value="deleteConfirmId = null"
     >
       <q-card class="zen-card" style="width: 360px; max-width: 90vw;">
-        <q-card-section><div class="text-subtitle-2">Delete Template?</div></q-card-section>
-        <q-card-section>This action cannot be undone.</q-card-section>
+        <q-card-section><div class="text-subtitle-2">{{ t('templateManager.deleteTemplate') }}</div></q-card-section>
+        <q-card-section>{{ t('common.thisActionCannotBeUndone') }}</q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" @click="deleteConfirmId = null" />
+          <q-btn flat :label="t('common.cancel')" @click="deleteConfirmId = null" />
           <q-btn
             flat
             color="negative"
-            label="Delete"
+            :label="t('common.delete')"
             @click="() => deleteConfirmId && confirmDelete(deleteConfirmId)"
           />
         </q-card-actions>

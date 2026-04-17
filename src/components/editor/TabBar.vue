@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import { useEditorStore } from "@/stores/editor";
 import { useSettingsStore } from "@/stores/settings";
 import { useCompiler } from "@/composables/useCompiler";
 import type { FileTab } from "@/types";
+
+const { t } = useI18n();
 
 const editorStore = useEditorStore();
 const settingsStore = useSettingsStore();
@@ -49,7 +52,7 @@ function getTabIcon(tab: FileTab): string {
     </div>
 
     <div v-if="editorStore.tabs.length === 0" class="tab-placeholder px-4 text-medium-emphasis text-caption">
-      No files open
+      {{ t('tabBar.noFilesOpen') }}
     </div>
 
     <q-space />
@@ -61,7 +64,7 @@ function getTabIcon(tab: FileTab): string {
       color="primary"
       icon="mdi-play"
       :disable="!editorStore.activeTab"
-      title="Compile"
+      :title="t('tabBar.compile')"
       class="compile-btn mx-2 flex-shrink-0"
       @click="triggerCompile"
     />
@@ -140,6 +143,10 @@ function getTabIcon(tab: FileTab): string {
   flex: 1;
   display: flex;
   align-items: center;
+  padding-left: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .compile-btn {

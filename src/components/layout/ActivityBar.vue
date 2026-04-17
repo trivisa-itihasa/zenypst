@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
+
 defineProps<{
   fileTreeVisible: boolean;
   previewVisible: boolean;
@@ -9,6 +11,8 @@ const emit = defineEmits<{
   (e: "toggle-preview"): void;
   (e: "open-settings"): void;
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -18,7 +22,7 @@ const emit = defineEmits<{
       class="activity-btn"
       :class="{ 'activity-btn--active': fileTreeVisible }"
       @click="emit('toggle-file-tree')"
-      title="Toggle Explorer"
+      :title="t('activityBar.toggleExplorer')"
     >
       <q-icon name="mdi-folder-outline" size="20px" />
     </button>
@@ -28,7 +32,7 @@ const emit = defineEmits<{
       class="activity-btn mt-1"
       :class="{ 'activity-btn--active': previewVisible }"
       @click="emit('toggle-preview')"
-      title="Toggle PDF Viewer"
+      :title="t('activityBar.togglePdfViewer')"
     >
       <q-icon name="mdi-file-pdf-box" size="26px" />
     </button>
@@ -36,7 +40,7 @@ const emit = defineEmits<{
     <div class="flex-grow-1" />
 
     <!-- Settings -->
-    <button class="activity-btn mb-1" @click="emit('open-settings')" title="Settings">
+    <button class="activity-btn mb-1" @click="emit('open-settings')" :title="t('activityBar.settings')">
       <q-icon name="mdi-cog-outline" size="20px" />
     </button>
   </div>

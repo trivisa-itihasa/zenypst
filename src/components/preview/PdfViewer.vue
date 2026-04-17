@@ -5,9 +5,12 @@ import { TextLayer } from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { invoke } from "@tauri-apps/api/core";
+import { useI18n } from "vue-i18n";
 import { usePreviewStore } from "@/stores/preview";
 import { useEditorStore } from "@/stores/editor";
 import CompileStatus from "./CompileStatus.vue";
+
+const { t } = useI18n();
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -222,7 +225,7 @@ watch(scale, (s) => {
     >
       <div class="pdf-empty__top" />
       <q-icon name="mdi-file-pdf-box" size="64px" color="grey-6" />
-      <p class="text-medium-emphasis mt-4">PDF preview will appear here</p>
+      <p class="text-medium-emphasis mt-4 empty-message">{{ t('pdfViewer.emptyState') }}</p>
       <div class="pdf-empty__bottom" />
     </div>
 
@@ -283,6 +286,13 @@ watch(scale, (s) => {
 
 .pdf-empty__top { flex: 2; }
 .pdf-empty__bottom { flex: 3; }
+
+.empty-message {
+  height: 1lh;
+  overflow: visible;
+  text-align: center;
+  padding: 0 16px;
+}
 </style>
 
 <!-- Text selection highlight color (global, targets dynamically created elements) -->

@@ -11,6 +11,7 @@ import SettingsDialog from "@/components/settings/SettingsDialog.vue";
 import TemplatePickerDialog from "@/components/template/TemplatePickerDialog.vue";
 import TemplateManager from "@/components/template/TemplateManager.vue";
 
+import { useI18n } from "vue-i18n";
 import { useSettingsStore } from "@/stores/settings";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
@@ -19,6 +20,8 @@ import { useTheme } from "@/composables/useTheme";
 import { useKeybindings } from "@/composables/useKeybindings";
 import { useTemplateStore } from "@/stores/template";
 import type { Template } from "@/types";
+
+const { t } = useI18n();
 
 const settingsStore = useSettingsStore();
 const fileOps = useFileOps();
@@ -35,7 +38,7 @@ const typstNotFoundBar = ref(false);
 
 const MIN_FILE_TREE = 180;
 const MIN_PREVIEW = 200;
-const MIN_EDITOR = 150;
+const MIN_EDITOR = 200;
 
 const fileTreeWidth = ref(240);
 const previewWidth = ref(320);
@@ -226,10 +229,10 @@ async function togglePreview(): Promise<void> {
     >
       <q-icon name="mdi-alert" size="14px" color="warning" class="mr-2" />
       <span class="text-caption">
-        <strong>Typst CLI not found.</strong>
-        Install from
-        <a href="https://typst.app" target="_blank" rel="noopener">typst.app</a>
-        and add to PATH.
+        <strong>{{ t('appShell.typstNotFound') }}</strong>
+        {{ t('appShell.typstInstallFrom') }}
+        <a href="https://typst.app" target="_blank" rel="noopener">{{ t('appShell.typstInstallSite') }}</a>
+        {{ t('appShell.typstInstallSuffix') }}
       </span>
       <q-space />
       <q-btn dense flat round size="xs" icon="mdi-close" @click="typstNotFoundBar = false" />
@@ -296,7 +299,7 @@ async function togglePreview(): Promise<void> {
     <q-dialog v-model="templateManagerDialog">
       <q-card class="zen-card" style="width: 640px; max-width: 90vw;">
         <q-card-section class="row items-center q-pa-md">
-          <div class="text-subtitle-2">Template Manager</div>
+          <div class="text-subtitle-2">{{ t('appShell.templateManager') }}</div>
           <q-space />
           <q-btn flat dense round icon="mdi-close" @click="templateManagerDialog = false" />
         </q-card-section>

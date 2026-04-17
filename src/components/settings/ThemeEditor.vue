@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useTheme } from "@/composables/useTheme";
 import { useSettingsStore } from "@/stores/settings";
 import type { Theme, ThemeColors } from "@/types";
 import { DEFAULT_DARK_COLORS } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+
+const { t } = useI18n();
 
 const { themes, activeTheme, loadThemes, setTheme, saveTheme, deleteTheme } = useTheme();
 const settingsStore = useSettingsStore();
@@ -18,27 +21,27 @@ const editingTheme = ref<Theme>({
   colors: { ...DEFAULT_DARK_COLORS },
 });
 
-const COLOR_FIELDS: { key: keyof ThemeColors; label: string }[] = [
-  { key: "background", label: "Background" },
-  { key: "foreground", label: "Text" },
-  { key: "caret", label: "Cursor" },
-  { key: "selection", label: "Selection" },
-  { key: "lineHighlight", label: "Line Highlight" },
-  { key: "gutterBackground", label: "Gutter Background" },
-  { key: "gutterForeground", label: "Gutter Text" },
-  { key: "heading", label: "Heading" },
-  { key: "emphasis", label: "Italic" },
-  { key: "strong", label: "Bold" },
-  { key: "keyword", label: "Keyword" },
-  { key: "function", label: "Function" },
-  { key: "string", label: "String" },
-  { key: "number", label: "Number" },
-  { key: "comment", label: "Comment" },
-  { key: "math", label: "Math" },
-  { key: "label", label: "Label / Reference" },
-  { key: "rawBlock", label: "Raw / Code" },
-  { key: "operator", label: "Operator" },
-  { key: "bracket", label: "Bracket" },
+const COLOR_FIELD_KEYS: { key: keyof ThemeColors; i18nKey: string }[] = [
+  { key: "background", i18nKey: "themeEditor.background" },
+  { key: "foreground", i18nKey: "themeEditor.text" },
+  { key: "caret", i18nKey: "themeEditor.cursor" },
+  { key: "selection", i18nKey: "themeEditor.selection" },
+  { key: "lineHighlight", i18nKey: "themeEditor.lineHighlight" },
+  { key: "gutterBackground", i18nKey: "themeEditor.gutterBackground" },
+  { key: "gutterForeground", i18nKey: "themeEditor.gutterText" },
+  { key: "heading", i18nKey: "themeEditor.heading" },
+  { key: "emphasis", i18nKey: "themeEditor.italic" },
+  { key: "strong", i18nKey: "themeEditor.bold" },
+  { key: "keyword", i18nKey: "themeEditor.keyword" },
+  { key: "function", i18nKey: "themeEditor.function" },
+  { key: "string", i18nKey: "themeEditor.string" },
+  { key: "number", i18nKey: "themeEditor.number" },
+  { key: "comment", i18nKey: "themeEditor.comment" },
+  { key: "math", i18nKey: "themeEditor.math" },
+  { key: "label", i18nKey: "themeEditor.labelReference" },
+  { key: "rawBlock", i18nKey: "themeEditor.rawCode" },
+  { key: "operator", i18nKey: "themeEditor.operator" },
+  { key: "bracket", i18nKey: "themeEditor.bracket" },
 ];
 
 function openNewTheme(): void {
@@ -88,8 +91,8 @@ async function confirmDelete(id: string): Promise<void> {
 <template>
   <div class="theme-editor">
     <div class="d-flex align-center mb-4">
-      <p class="text-subtitle-2 flex-grow-1">Syntax Theme</p>
-      <q-btn dense outline no-caps icon="mdi-plus" label="New Theme" @click="openNewTheme" />
+      <p class="text-subtitle-2 flex-grow-1">{{ t('themeEditor.syntaxTheme') }}</p>
+      <q-btn dense outline no-caps icon="mdi-plus" :label="t('themeEditor.newTheme')" @click="openNewTheme" />
     </div>
 
     <q-list dense class="mb-4">
@@ -109,7 +112,7 @@ async function confirmDelete(id: string): Promise<void> {
         </q-item-section>
         <q-item-section>
           <q-item-label>{{ theme.name }}</q-item-label>
-          <q-item-label v-if="theme.builtIn" caption>Built-in</q-item-label>
+          <q-item-label v-if="theme.builtIn" caption>{{ t('themeEditor.builtIn') }}</q-item-label>
         </q-item-section>
         <q-item-section side>
           <div class="row no-wrap">
@@ -136,19 +139,19 @@ async function confirmDelete(id: string): Promise<void> {
     <q-dialog v-model="editDialog">
       <q-card class="zen-card" style="width: 560px; max-width: 95vw;">
         <q-card-section>
-          <div class="text-subtitle-2">{{ editingTheme.id ? "Edit Theme" : "New Theme" }}</div>
+          <div class="text-subtitle-2">{{ editingTheme.id ? t('themeEditor.editTheme') : t('themeEditor.newTheme') }}</div>
         </q-card-section>
         <q-card-section style="max-height: 70vh; overflow-y: auto;">
           <q-input
             v-model="editingTheme.name"
-            label="Theme Name"
+            :label="t('themeEditor.themeName')"
             outlined
             dense
             class="mb-4"
           />
           <div class="row q-col-gutter-x-sm q-col-gutter-y-xs">
             <div
-              v-for="field in COLOR_FIELDS"
+              v-for="field in COLOR_FIELD_KEYS"
               :key="field.key"
               class="col-6"
             >
@@ -170,7 +173,7 @@ async function confirmDelete(id: string): Promise<void> {
                 </div>
                 <q-input
                   v-model="editingTheme.colors[field.key]"
-                  :label="field.label"
+                  :label="t(field.i18nKey)"
                   borderless
                   dense
                   class="color-input flex-grow-1"
@@ -180,8 +183,8 @@ async function confirmDelete(id: string): Promise<void> {
           </div>
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" @click="editDialog = false" />
-          <q-btn flat color="primary" label="Save" @click="saveEditingTheme" />
+          <q-btn flat :label="t('common.cancel')" @click="editDialog = false" />
+          <q-btn flat color="primary" :label="t('common.save')" @click="saveEditingTheme" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -192,14 +195,14 @@ async function confirmDelete(id: string): Promise<void> {
       @update:model-value="deleteConfirmId = null"
     >
       <q-card class="zen-card" style="width: 360px; max-width: 90vw;">
-        <q-card-section><div class="text-subtitle-2">Delete Theme?</div></q-card-section>
-        <q-card-section>This action cannot be undone.</q-card-section>
+        <q-card-section><div class="text-subtitle-2">{{ t('themeEditor.deleteTheme') }}</div></q-card-section>
+        <q-card-section>{{ t('common.thisActionCannotBeUndone') }}</q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" @click="deleteConfirmId = null" />
+          <q-btn flat :label="t('common.cancel')" @click="deleteConfirmId = null" />
           <q-btn
             flat
             color="negative"
-            label="Delete"
+            :label="t('common.delete')"
             @click="() => deleteConfirmId && confirmDelete(deleteConfirmId)"
           />
         </q-card-actions>

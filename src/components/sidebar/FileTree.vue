@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
 import { ensureTypExtension } from "@/utils/path";
 import FileTreeItem from "./FileTreeItem.vue";
+
+const { t } = useI18n();
 
 const emit = defineEmits<{ (e: "open-file", path: string): void }>();
 
@@ -69,20 +72,20 @@ async function confirmNewFolder(): Promise<void> {
         <template v-if="fileTreeStore.rootPath">
           {{ getRootName(fileTreeStore.rootPath) }}
         </template>
-        <template v-else>Explorer</template>
+        <template v-else>{{ t('fileTree.explorer') }}</template>
       </span>
-      <button class="header-btn" title="Refresh" @click="refreshTree">
+      <button class="header-btn" :title="t('fileTree.refresh')" @click="refreshTree">
         <q-icon name="mdi-refresh" class="header-btn-icon" />
       </button>
       <button
         v-if="fileTreeStore.rootPath"
         class="header-btn"
-        title="Close Folder"
+        :title="t('fileTree.closeFolder')"
         @click="fileTreeStore.clearTree()"
       >
         <q-icon name="mdi-folder-remove-outline" class="header-btn-icon" />
       </button>
-      <button class="header-btn" title="Open Folder" @click="openFolder">
+      <button class="header-btn" :title="t('fileTree.openFolder')" @click="openFolder">
         <q-icon name="mdi-folder-open-outline" class="header-btn-icon" />
       </button>
     </div>
@@ -112,14 +115,15 @@ async function confirmNewFolder(): Promise<void> {
       >
         <div class="file-tree-empty__top" />
         <q-icon name="mdi-folder-outline" size="64px" color="grey-6" />
-        <p class="text-medium-emphasis mt-4">Open a folder to browse files</p>
+        <p class="text-medium-emphasis mt-4 empty-message">{{ t('fileTree.openFolderToBrowse') }}</p>
         <div class="file-tree-empty__bottom">
           <div class="file-tree-empty__actions">
             <q-btn
               flat
               no-caps
+              no-wrap
               icon="mdi-folder-open"
-              label="Open Folder"
+              :label="t('fileTree.openFolder')"
               class="empty-action-btn"
               @click="openFolder"
             />
@@ -136,11 +140,11 @@ async function confirmNewFolder(): Promise<void> {
         <q-list dense class="zen-menu-list">
           <q-item clickable v-close-popup @click="startNewFile">
             <q-item-section avatar><q-icon name="mdi-file-plus-outline" size="16px" /></q-item-section>
-            <q-item-section>New File</q-item-section>
+            <q-item-section>{{ t('fileTree.newFile') }}</q-item-section>
           </q-item>
           <q-item clickable v-close-popup @click="startNewFolder">
             <q-item-section avatar><q-icon name="mdi-folder-plus-outline" size="16px" /></q-item-section>
-            <q-item-section>New Folder</q-item-section>
+            <q-item-section>{{ t('fileTree.newFolder') }}</q-item-section>
           </q-item>
         </q-list>
       </q-menu>
@@ -149,11 +153,11 @@ async function confirmNewFolder(): Promise<void> {
     <!-- New File dialog -->
     <q-dialog v-model="newFileDialog">
       <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
-        <q-card-section><div class="text-subtitle-2">New File</div></q-card-section>
+        <q-card-section><div class="text-subtitle-2">{{ t('fileTree.newFile') }}</div></q-card-section>
         <q-card-section>
           <q-input
             v-model="newFileValue"
-            label="File name"
+            :label="t('fileTree.fileName')"
             outlined
             dense
             autofocus
@@ -161,8 +165,8 @@ async function confirmNewFolder(): Promise<void> {
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" @click="newFileDialog = false" />
-          <q-btn flat color="primary" label="Create" @click="confirmNewFile" />
+          <q-btn flat :label="t('common.cancel')" @click="newFileDialog = false" />
+          <q-btn flat color="primary" :label="t('common.create')" @click="confirmNewFile" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -170,11 +174,11 @@ async function confirmNewFolder(): Promise<void> {
     <!-- New Folder dialog -->
     <q-dialog v-model="newFolderDialog">
       <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
-        <q-card-section><div class="text-subtitle-2">New Folder</div></q-card-section>
+        <q-card-section><div class="text-subtitle-2">{{ t('fileTree.newFolder') }}</div></q-card-section>
         <q-card-section>
           <q-input
             v-model="newFolderValue"
-            label="Folder name"
+            :label="t('fileTree.folderName')"
             outlined
             dense
             autofocus
@@ -182,8 +186,8 @@ async function confirmNewFolder(): Promise<void> {
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" @click="newFolderDialog = false" />
-          <q-btn flat color="primary" label="Create" @click="confirmNewFolder" />
+          <q-btn flat :label="t('common.cancel')" @click="newFolderDialog = false" />
+          <q-btn flat color="primary" :label="t('common.create')" @click="confirmNewFolder" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -264,6 +268,13 @@ async function confirmNewFolder(): Promise<void> {
 
 .empty-action-btn {
   justify-content: flex-start;
+}
+
+.empty-message {
+  height: 1lh;
+  overflow: visible;
+  text-align: center;
+  padding: 0 16px;
 }
 
 .root-name-label {

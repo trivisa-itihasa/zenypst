@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useEditorStore } from "@/stores/editor";
 import { usePreviewStore } from "@/stores/preview";
 import { useSettingsStore } from "@/stores/settings";
 
+const { t } = useI18n();
 const editorStore = useEditorStore();
 const previewStore = usePreviewStore();
 const settingsStore = useSettingsStore();
@@ -16,10 +18,10 @@ const currentFile = computed(() => {
 
 const compileStatusText = computed(() => {
   switch (previewStore.status) {
-    case "compiling": return "Compiling…";
-    case "success": return "✓ Compiled";
-    case "error": return `✗ ${previewStore.errors.length} error(s)`;
-    default: return "Idle";
+    case "compiling": return t("statusBar.compiling");
+    case "success": return t("statusBar.compiled");
+    case "error": return t("statusBar.errorCount", { count: previewStore.errors.length });
+    default: return t("statusBar.idle");
   }
 });
 
@@ -34,9 +36,9 @@ const compileStatusColor = computed(() => {
 
 const previewModeLabel = computed(() => {
   switch (settingsStore.settings.previewMode) {
-    case "realtime": return "Real-time";
-    case "on_save": return "On Save";
-    case "manual": return "Manual";
+    case "realtime": return t("statusBar.realtime");
+    case "on_save": return t("statusBar.onSave");
+    case "manual": return t("statusBar.manual");
     default: return "";
   }
 });
@@ -46,7 +48,7 @@ const previewModeLabel = computed(() => {
   <div class="status-bar d-flex align-center px-3 text-caption">
     <!-- File path -->
     <span class="status-bar__file text-medium-emphasis text-truncate">
-      {{ currentFile || "No file open" }}
+      {{ currentFile || t('statusBar.noFileOpen') }}
     </span>
 
     <q-space />

@@ -1,24 +1,26 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import { useSettingsStore } from "@/stores/settings";
 import type { AppSettings } from "@/types";
 
+const { t } = useI18n();
 const settingsStore = useSettingsStore();
 
 const PREVIEW_MODES: { value: AppSettings["previewMode"]; label: string; description: string }[] = [
   {
     value: "realtime",
-    label: "Real-time",
-    description: "Compile automatically as you type",
+    label: t("previewSettings.realtime"),
+    description: t("previewSettings.realtimeDescription"),
   },
   {
     value: "on_save",
-    label: "On Save",
-    description: "Compile when you save the file (Ctrl+S)",
+    label: t("previewSettings.onSave"),
+    description: t("previewSettings.onSaveDescription"),
   },
   {
     value: "manual",
-    label: "Manual",
-    description: "Compile only when you click the compile button",
+    label: t("previewSettings.manual"),
+    description: t("previewSettings.manualDescription"),
   },
 ];
 
@@ -36,9 +38,9 @@ async function updateDebounce(value: string | number | null): Promise<void> {
 
 <template>
   <div class="preview-settings">
-    <p class="text-subtitle-2 mb-4">Preview Settings</p>
+    <p class="text-subtitle-2 mb-4">{{ t('previewSettings.title') }}</p>
 
-    <p class="text-body-2 text-medium-emphasis mb-2">Update Mode</p>
+    <p class="text-body-2 text-medium-emphasis mb-2">{{ t('previewSettings.updateMode') }}</p>
     <template v-for="mode in PREVIEW_MODES" :key="mode.value">
       <div class="mode-row">
         <q-radio
@@ -57,7 +59,7 @@ async function updateDebounce(value: string | number | null): Promise<void> {
         <q-input
           :model-value="settingsStore.settings.realtimeDebounceMs"
           :disable="settingsStore.settings.previewMode !== 'realtime'"
-          label="Debounce (ms)"
+          :label="t('previewSettings.debounce')"
           type="number"
           outlined
           dense

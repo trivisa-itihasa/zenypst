@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { useSettingsStore } from "@/stores/settings";
+
+const { t } = useI18n();
 
 const settingsStore = useSettingsStore();
 
@@ -141,12 +144,12 @@ async function toggleWordWrap(): Promise<void> {
 
 <template>
   <div class="font-settings">
-    <p class="text-subtitle-2 mb-4">Font Settings</p>
+    <p class="text-subtitle-2 mb-4">{{ t('fontSettings.title') }}</p>
 
     <div class="font-picker mb-4">
       <q-input
         :model-value="fontInput"
-        label="Font Family"
+        :label="t('fontSettings.fontFamily')"
         outlined
         dense
         autocomplete="off"
@@ -170,7 +173,7 @@ async function toggleWordWrap(): Promise<void> {
     <div class="font-picker mb-4">
       <q-input
         :model-value="fallbackInput"
-        label="Fallback Font"
+        :label="t('fontSettings.fallbackFont')"
         outlined
         dense
         autocomplete="off"
@@ -193,7 +196,7 @@ async function toggleWordWrap(): Promise<void> {
 
     <q-input
       :model-value="settingsStore.settings.fontSize"
-      label="Font Size (px)"
+      :label="t('fontSettings.fontSize')"
       type="number"
       outlined
       dense
@@ -205,7 +208,7 @@ async function toggleWordWrap(): Promise<void> {
 
     <q-toggle
       :model-value="settingsStore.settings.showLineNumbers"
-      label="Show Line Numbers"
+      :label="t('fontSettings.showLineNumbers')"
       dense
       class="mb-2"
       @update:model-value="toggleLineNumbers"
@@ -215,7 +218,7 @@ async function toggleWordWrap(): Promise<void> {
 
     <q-toggle
       :model-value="settingsStore.settings.wordWrap"
-      label="Word Wrap"
+      :label="t('fontSettings.wordWrap')"
       dense
       @update:model-value="toggleWordWrap"
     />

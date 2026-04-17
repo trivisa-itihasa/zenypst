@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { useI18n } from "vue-i18n";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
 import { ensureTypExtension } from "@/utils/path";
 import TemplatePickerDialog from "@/components/template/TemplatePickerDialog.vue";
 import type { FileNode, Template } from "@/types";
+
+const { t } = useI18n();
 
 const props = defineProps<{ node: FileNode; depth?: number }>();
 const emit = defineEmits<{ (e: "open-file", path: string): void }>();
@@ -194,21 +197,21 @@ async function confirmNewFolder(): Promise<void> {
           <template v-if="node.isDir">
             <q-item clickable v-close-popup @click="startNewFile">
               <q-item-section avatar><q-icon name="mdi-file-plus-outline" size="16px" /></q-item-section>
-              <q-item-section>New File</q-item-section>
+              <q-item-section>{{ t('fileTreeItem.newFile') }}</q-item-section>
             </q-item>
             <q-item clickable v-close-popup @click="startNewFolder">
               <q-item-section avatar><q-icon name="mdi-folder-plus-outline" size="16px" /></q-item-section>
-              <q-item-section>New Folder</q-item-section>
+              <q-item-section>{{ t('fileTreeItem.newFolder') }}</q-item-section>
             </q-item>
             <q-separator />
           </template>
           <q-item clickable v-close-popup @click="deleteDialog = true">
             <q-item-section avatar><q-icon name="mdi-delete" size="16px" /></q-item-section>
-            <q-item-section>Delete</q-item-section>
+            <q-item-section>{{ t('fileTreeItem.deleteItem') }}</q-item-section>
           </q-item>
           <q-item clickable v-close-popup @click="openInFileManager">
             <q-item-section avatar><q-icon name="mdi-folder-open" size="16px" /></q-item-section>
-            <q-item-section>Reveal in File Manager</q-item-section>
+            <q-item-section>{{ t('fileTreeItem.revealInFileManager') }}</q-item-section>
           </q-item>
         </q-list>
       </q-menu>
@@ -228,11 +231,11 @@ async function confirmNewFolder(): Promise<void> {
     <!-- New File dialog (folder context) -->
     <q-dialog v-model="newFileDialog">
       <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
-        <q-card-section><div class="text-subtitle-2">New File</div></q-card-section>
+        <q-card-section><div class="text-subtitle-2">{{ t('fileTreeItem.newFile') }}</div></q-card-section>
         <q-card-section>
           <q-input
             v-model="newFileValue"
-            label="File name"
+            :label="t('fileTreeItem.fileName')"
             outlined
             dense
             autofocus
@@ -254,12 +257,12 @@ async function confirmNewFolder(): Promise<void> {
             flat
             no-caps
             icon="mdi-file-document-multiple-outline"
-            label="From Template"
+            :label="t('fileTreeItem.fromTemplate')"
             @click="newFileTemplatePicker = true"
           />
           <q-space />
-          <q-btn flat label="Cancel" @click="newFileDialog = false" />
-          <q-btn flat color="primary" label="Create" @click="confirmNewFile" />
+          <q-btn flat :label="t('common.cancel')" @click="newFileDialog = false" />
+          <q-btn flat color="primary" :label="t('common.create')" @click="confirmNewFile" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -273,11 +276,11 @@ async function confirmNewFolder(): Promise<void> {
     <!-- New Folder dialog (folder context) -->
     <q-dialog v-model="newFolderDialog">
       <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
-        <q-card-section><div class="text-subtitle-2">New Folder</div></q-card-section>
+        <q-card-section><div class="text-subtitle-2">{{ t('fileTreeItem.newFolder') }}</div></q-card-section>
         <q-card-section>
           <q-input
             v-model="newFolderValue"
-            label="Folder name"
+            :label="t('fileTreeItem.folderName')"
             outlined
             dense
             autofocus
@@ -285,8 +288,8 @@ async function confirmNewFolder(): Promise<void> {
           />
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" @click="newFolderDialog = false" />
-          <q-btn flat color="primary" label="Create" @click="confirmNewFolder" />
+          <q-btn flat :label="t('common.cancel')" @click="newFolderDialog = false" />
+          <q-btn flat color="primary" :label="t('common.create')" @click="confirmNewFolder" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -294,13 +297,13 @@ async function confirmNewFolder(): Promise<void> {
     <!-- Delete confirm dialog -->
     <q-dialog v-model="deleteDialog">
       <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
-        <q-card-section><div class="text-subtitle-2">Delete "{{ node.name }}"?</div></q-card-section>
+        <q-card-section><div class="text-subtitle-2">{{ t('fileTreeItem.deleteConfirm', { name: node.name }) }}</div></q-card-section>
         <q-card-section>
-          This action cannot be undone.
+          {{ t('common.thisActionCannotBeUndone') }}
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" @click="deleteDialog = false" />
-          <q-btn flat color="negative" label="Delete" @click="confirmDelete" />
+          <q-btn flat :label="t('common.cancel')" @click="deleteDialog = false" />
+          <q-btn flat color="negative" :label="t('common.delete')" @click="confirmDelete" />
         </q-card-actions>
       </q-card>
     </q-dialog>

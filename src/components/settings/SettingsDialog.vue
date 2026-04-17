@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useSettingsStore } from "@/stores/settings";
 import FontSettings from "./FontSettings.vue";
 import ThemeEditor from "./ThemeEditor.vue";
@@ -9,6 +10,7 @@ import TypstSettings from "./TypstSettings.vue";
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: "update:modelValue", v: boolean): void }>();
 
+const { t } = useI18n();
 const settingsStore = useSettingsStore();
 const tab = ref("editor");
 
@@ -19,11 +21,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { value: "editor", icon: "mdi-format-font", label: "Editor" },
-  { value: "theme", icon: "mdi-palette", label: "Theme" },
-  { value: "preview", icon: "mdi-eye", label: "Preview" },
-  { value: "appearance", icon: "mdi-monitor", label: "Appearance" },
-  { value: "typst", icon: "mdi-typewriter", label: "Typst" },
+  { value: "editor", icon: "mdi-format-font", label: t("settings.editor") },
+  { value: "theme", icon: "mdi-palette", label: t("settings.theme") },
+  { value: "preview", icon: "mdi-eye", label: t("settings.preview") },
+  { value: "appearance", icon: "mdi-monitor", label: t("settings.appearance") },
+  { value: "typst", icon: "mdi-typewriter", label: t("settings.typst") },
 ];
 
 async function toggleColorScheme(value: boolean): Promise<void> {
@@ -38,7 +40,7 @@ async function toggleColorScheme(value: boolean): Promise<void> {
   >
     <q-card class="zen-card" style="width: 720px; max-width: 95vw;">
       <q-card-section class="row items-center q-pa-md">
-        <div class="text-subtitle-2">Settings</div>
+        <div class="text-subtitle-2">{{ t('settings.title') }}</div>
         <q-space />
         <q-btn flat dense round icon="mdi-close" @click="emit('update:modelValue', false)" />
       </q-card-section>
@@ -75,10 +77,10 @@ async function toggleColorScheme(value: boolean): Promise<void> {
               <PreviewSettings />
             </div>
             <div v-show="tab === 'appearance'">
-              <p class="text-subtitle-2 mb-4">Appearance</p>
+              <p class="text-subtitle-2 mb-4">{{ t('settings.appearance') }}</p>
               <q-toggle
                 :model-value="settingsStore.settings.colorScheme === 'dark'"
-                label="Dark Mode"
+                :label="t('settings.darkMode')"
                 dense
                 @update:model-value="toggleColorScheme"
               />

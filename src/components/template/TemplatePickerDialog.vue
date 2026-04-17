@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { useTemplateStore } from "@/stores/template";
 import type { Template } from "@/types";
+
+const { t } = useI18n();
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -38,11 +41,11 @@ function select(template: Template): void {
     @update:model-value="emit('update:modelValue', $event)"
   >
     <q-card class="zen-card" style="width: 560px; max-width: 95vw;">
-      <q-card-section><div class="text-subtitle-2">New File — Choose Template</div></q-card-section>
+      <q-card-section><div class="text-subtitle-2">{{ t('templatePicker.title') }}</div></q-card-section>
       <q-card-section>
         <q-input
           v-model="search"
-          placeholder="Search templates…"
+          :placeholder="t('templatePicker.searchPlaceholder')"
           outlined
           dense
           clearable
@@ -80,12 +83,12 @@ function select(template: Template): void {
             v-if="filteredTemplates.length === 0 && !templateStore.isLoading"
             class="text-medium-emphasis"
           >
-            <q-item-section>No templates found</q-item-section>
+            <q-item-section>{{ t('templatePicker.noTemplatesFound') }}</q-item-section>
           </q-item>
         </q-list>
       </q-card-section>
       <q-card-actions align="right">
-        <q-btn flat label="Cancel" @click="emit('update:modelValue', false)" />
+        <q-btn flat :label="t('common.cancel')" @click="emit('update:modelValue', false)" />
       </q-card-actions>
     </q-card>
   </q-dialog>

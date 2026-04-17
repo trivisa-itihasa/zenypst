@@ -60,7 +60,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: build-${{ github.run_number }}
+          tagName: app-v${{ github.run_number }}
           releaseName: "Zenypst Build #${{ github.run_number }}"
           releaseDraft: true
           prerelease: false

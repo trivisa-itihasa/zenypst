@@ -532,4 +532,4 @@ These are explicitly out of scope for the initial version:
 - Export to formats other than PDF
 - Terminal panel
 - Scroll sync between editor and PDF
-- i18n / multi-language UI (English only for now)
+- i18n: vue-i18n integrated, all UI strings externalized to `src/locales/en.ts`. Additional languages can be added by creating new locale files (e.g. `ja.ts`) and registering them in `src/plugins/i18n.ts`

@@ -3,12 +3,15 @@ import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Notify } from "quasar";
+import { useI18n } from "vue-i18n";
 import appIconUrl from "@/assets/icons/icon-str.svg";
 import { useFileOps } from "@/composables/useFileOps";
 import { useCompiler } from "@/composables/useCompiler";
 import { useSettingsStore } from "@/stores/settings";
 import { useEditorStore } from "@/stores/editor";
 import { getDirectory } from "@/utils/path";
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
   (e: "new-file"): void;
@@ -83,13 +86,13 @@ async function handleExportPdf(): Promise<void> {
   try {
     const result = await exportPdf(tab.content, root, outputPath);
     if (result.success) {
-      notify("PDF exported successfully.", "positive");
+      notify(t("toolbar.pdfExportedSuccessfully"), "positive");
     } else {
       const msg = result.errors.map((e) => e.message).join("; ");
-      notify("Export failed: " + msg);
+      notify(t("toolbar.exportFailed", { msg }));
     }
   } catch (err) {
-    notify("Export failed: " + String(err));
+    notify(t("toolbar.exportFailed", { msg: String(err) }));
   }
 }
 </script>
@@ -97,49 +100,49 @@ async function handleExportPdf(): Promise<void> {
 <template>
   <div class="toolbar d-flex align-center" data-tauri-drag-region>
     <div class="toolbar-logo">
-      <button class="icon-btn" @click="aboutDialog = true" title="About Zenypst">
+      <button class="icon-btn" @click="aboutDialog = true" :title="t('toolbar.aboutZenypst')">
         <img :src="appIconUrl" class="app-icon" alt="Zenypst" />
       </button>
     </div>
 
-    <q-btn flat dense no-caps class="menu-btn" label="File">
+    <q-btn flat dense no-caps class="menu-btn" :label="t('toolbar.file')">
       <q-menu auto-close :offset="[0, 4]">
         <q-list dense class="zen-menu-list">
           <q-item clickable @click="handleNewFile">
             <q-item-section avatar><q-icon name="mdi-file-plus" size="16px" /></q-item-section>
-            <q-item-section>New File</q-item-section>
+            <q-item-section>{{ t('toolbar.newFile') }}</q-item-section>
             <q-item-section side><span class="menu-shortcut">Ctrl+N</span></q-item-section>
           </q-item>
           <q-separator />
           <q-item clickable @click="handleOpenFile">
             <q-item-section avatar><q-icon name="mdi-file-outline" size="16px" /></q-item-section>
-            <q-item-section>Open File…</q-item-section>
+            <q-item-section>{{ t('toolbar.openFile') }}</q-item-section>
             <q-item-section side><span class="menu-shortcut">Ctrl+O</span></q-item-section>
           </q-item>
           <q-item clickable @click="handleOpenFolder">
             <q-item-section avatar><q-icon name="mdi-folder-open" size="16px" /></q-item-section>
-            <q-item-section>Open Folder…</q-item-section>
+            <q-item-section>{{ t('toolbar.openFolder') }}</q-item-section>
             <q-item-section side><span class="menu-shortcut">Ctrl+Shift+O</span></q-item-section>
           </q-item>
           <q-separator />
           <q-item clickable :disable="!editorStore.activeTab" @click="handleSave">
             <q-item-section avatar><q-icon name="mdi-content-save" size="16px" /></q-item-section>
-            <q-item-section>Save</q-item-section>
+            <q-item-section>{{ t('toolbar.saveFile') }}</q-item-section>
             <q-item-section side><span class="menu-shortcut">Ctrl+S</span></q-item-section>
           </q-item>
           <q-item clickable :disable="!editorStore.activeTab" @click="handleSaveAs">
             <q-item-section avatar><q-icon name="mdi-content-save-edit" size="16px" /></q-item-section>
-            <q-item-section>Save As…</q-item-section>
+            <q-item-section>{{ t('toolbar.saveAs') }}</q-item-section>
           </q-item>
           <q-separator />
           <q-item clickable :disable="!editorStore.activeTab" @click="handleExportPdf">
             <q-item-section avatar><q-icon name="mdi-file-pdf-box" size="16px" /></q-item-section>
-            <q-item-section>Export PDF…</q-item-section>
+            <q-item-section>{{ t('toolbar.exportPdf') }}</q-item-section>
           </q-item>
           <q-separator />
           <q-item clickable @click="emit('open-templates')">
             <q-item-section avatar><q-icon name="mdi-file-document-multiple" size="16px" /></q-item-section>
-            <q-item-section>Manage Templates</q-item-section>
+            <q-item-section>{{ t('toolbar.manageTemplates') }}</q-item-section>
           </q-item>
         </q-list>
       </q-menu>
@@ -148,13 +151,13 @@ async function handleExportPdf(): Promise<void> {
     <q-space />
 
     <template v-if="isTauri">
-      <button class="winctl-btn" @click="minimize" title="最小化">
+      <button class="winctl-btn" @click="minimize" :title="t('toolbar.minimize')">
         <q-icon name="mdi-minus" size="14px" />
       </button>
-      <button class="winctl-btn" @click="toggleMaximize" :title="isMaximized ? '元のサイズに戻す' : '最大化'">
+      <button class="winctl-btn" @click="toggleMaximize" :title="isMaximized ? t('toolbar.restore') : t('toolbar.maximize')">
         <q-icon :name="isMaximized ? 'mdi-window-restore' : 'mdi-window-maximize'" size="14px" />
       </button>
-      <button class="winctl-btn winctl-btn--close" @click="closeWindow" title="閉じる">
+      <button class="winctl-btn winctl-btn--close" @click="closeWindow" :title="t('toolbar.closeWindow')">
         <q-icon name="mdi-close" size="14px" />
       </button>
     </template>
@@ -167,12 +170,12 @@ async function handleExportPdf(): Promise<void> {
         <div class="text-subtitle-2">Zenypst</div>
       </q-card-section>
       <q-card-section>
-        <p class="mb-2">A desktop Typst editor with live PDF preview.</p>
-        <p class="text-caption text-medium-emphasis">Version 0.1.0</p>
-        <p class="text-caption text-medium-emphasis">Built with Tauri, Vue 3, Quasar, and CodeMirror 6.</p>
+        <p class="mb-2">{{ t('toolbar.aboutDescription') }}</p>
+        <p class="text-caption text-medium-emphasis">{{ t('toolbar.aboutVersion') }}</p>
+        <p class="text-caption text-medium-emphasis">{{ t('toolbar.aboutBuiltWith') }}</p>
       </q-card-section>
       <q-card-actions align="right">
-        <q-btn flat label="Close" @click="aboutDialog = false" />
+        <q-btn flat :label="t('common.close')" @click="aboutDialog = false" />
       </q-card-actions>
     </q-card>
   </q-dialog>

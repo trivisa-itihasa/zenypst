@@ -2,11 +2,14 @@
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { EditorView } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
+import { useI18n } from "vue-i18n";
 import { useEditorStore } from "@/stores/editor";
 import { useSettingsStore } from "@/stores/settings";
 import { usePreviewStore } from "@/stores/preview";
 import { useCompiler } from "@/composables/useCompiler";
 import { useTheme } from "@/composables/useTheme";
+
+const { t } = useI18n();
 import { createEditorState, buildDynamicExtensions, applyDiagnostics } from "./codemirror/setup";
 import TabBar from "./TabBar.vue";
 
@@ -184,22 +187,24 @@ onUnmounted(() => {
     <div v-else class="editor-empty">
       <div class="editor-empty__top" />
       <q-icon name="mdi-file-document-outline" size="64px" color="grey-6" />
-      <p class="text-medium-emphasis mt-4">Open a file to start editing</p>
+      <p class="text-medium-emphasis mt-4 empty-message">{{ t('editorPanel.openFileToStart') }}</p>
       <div class="editor-empty__bottom">
         <div class="editor-empty__actions">
           <q-btn
             flat
             no-caps
+            no-wrap
             icon="mdi-file-plus"
-            label="New File"
+            :label="t('editorPanel.newFile')"
             class="empty-action-btn"
             @click="$emit('new-file')"
           />
           <q-btn
             flat
             no-caps
+            no-wrap
             icon="mdi-folder-open"
-            label="Open File"
+            :label="t('editorPanel.openFile')"
             class="empty-action-btn"
             @click="$emit('open-file')"
           />
@@ -243,6 +248,13 @@ onUnmounted(() => {
 
 .empty-action-btn {
   justify-content: flex-start;
+}
+
+.empty-message {
+  height: 1lh;
+  overflow: visible;
+  text-align: center;
+  padding: 0 16px;
 }
 
 .editor-panel {

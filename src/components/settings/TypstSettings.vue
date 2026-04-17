@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { invoke } from "@tauri-apps/api/core";
+
+const { t } = useI18n();
 
 const version = ref<string | null>(null);
 
@@ -14,9 +17,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <p class="text-subtitle-2 mb-4">Typst</p>
+  <p class="text-subtitle-2 mb-4">{{ t('typstSettings.title') }}</p>
   <p class="text-body-2 mb-2">
-    Typst is bundled directly into Zenypst — no external CLI is required.
+    {{ t('typstSettings.bundledMessage') }}
   </p>
   <div v-if="version" class="d-flex align-center gap-2 mt-4">
     <q-icon name="mdi-check-circle" size="16px" color="positive" />

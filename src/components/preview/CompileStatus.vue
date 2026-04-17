@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { usePreviewStore } from "@/stores/preview";
 
+const { t } = useI18n();
 const previewStore = usePreviewStore();
 
 const statusText = computed(() => {
   switch (previewStore.status) {
-    case "compiling": return "Compiling…";
-    case "success": return "Compiled successfully";
-    case "error": return `${previewStore.errors.length} error(s)`;
-    default: return "Idle";
+    case "compiling": return t("compileStatus.compiling");
+    case "success": return t("compileStatus.compiledSuccessfully");
+    case "error": return t("compileStatus.errorCount", { count: previewStore.errors.length });
+    default: return t("compileStatus.idle");
   }
 });
 
@@ -28,7 +30,7 @@ const statusColor = computed(() => {
     <div class="compile-error-panel pa-3">
       <div class="d-flex align-center mb-2">
         <q-icon name="mdi-alert-circle" color="negative" class="mr-2" />
-        <span class="text-subtitle-2 text-error">Compilation Errors</span>
+        <span class="text-subtitle-2 text-error">{{ t('compileStatus.compilationErrors') }}</span>
       </div>
       <div
         v-for="(err, i) in previewStore.errors"
@@ -44,7 +46,7 @@ const statusColor = computed(() => {
           <span v-if="err.column" class="caret-line">{{ ' '.repeat(err.column - 1) }}^</span>
         </div>
         <div v-for="(hint, hi) in err.hints" :key="hi" class="text-caption hint-text mt-1">
-          hint: {{ hint }}
+          {{ t('compileStatus.hint', { hint }) }}
         </div>
       </div>
       <div
@@ -62,7 +64,7 @@ const statusColor = computed(() => {
           <span v-if="warn.column" class="caret-line">{{ ' '.repeat(warn.column - 1) }}^</span>
         </div>
         <div v-for="(hint, hi) in warn.hints" :key="hi" class="text-caption hint-text mt-1">
-          hint: {{ hint }}
+          {{ t('compileStatus.hint', { hint }) }}
         </div>
       </div>
     </div>
