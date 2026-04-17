@@ -72,7 +72,13 @@
       "Bash(cat:*)",
       "Bash(find /home/gecko/project/zenypst/src-tauri -name *.wxs -o -name *.nsi -o -name *.wix)",
       "Bash(npx tauri:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(gh release:*)",
+      "Bash(brew list:*)",
+      "Bash(brew install:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh run:*)",
+      "Bash(gh api:*)"
     ]
   }
 }
