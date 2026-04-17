@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { useSettingsStore } from "@/stores/settings";
 import FontSettings from "./FontSettings.vue";
 import ThemeEditor from "./ThemeEditor.vue";
 import PreviewSettings from "./PreviewSettings.vue";
@@ -11,7 +10,6 @@ defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: "update:modelValue", v: boolean): void }>();
 
 const { t } = useI18n();
-const settingsStore = useSettingsStore();
 const tab = ref("editor");
 
 interface NavItem {
@@ -24,13 +22,8 @@ const NAV_ITEMS: NavItem[] = [
   { value: "editor", icon: "mdi-format-font", label: t("settings.editor") },
   { value: "theme", icon: "mdi-palette", label: t("settings.theme") },
   { value: "preview", icon: "mdi-eye", label: t("settings.preview") },
-  { value: "appearance", icon: "mdi-monitor", label: t("settings.appearance") },
   { value: "typst", icon: "mdi-typewriter", label: t("settings.typst") },
 ];
-
-async function toggleColorScheme(value: boolean): Promise<void> {
-  await settingsStore.update("colorScheme", value ? "dark" : "light");
-}
 </script>
 
 <template>
@@ -75,15 +68,6 @@ async function toggleColorScheme(value: boolean): Promise<void> {
             </div>
             <div v-show="tab === 'preview'">
               <PreviewSettings />
-            </div>
-            <div v-show="tab === 'appearance'">
-              <p class="text-subtitle-2 mb-4">{{ t('settings.appearance') }}</p>
-              <q-toggle
-                :model-value="settingsStore.settings.colorScheme === 'dark'"
-                :label="t('settings.darkMode')"
-                dense
-                @update:model-value="toggleColorScheme"
-              />
             </div>
             <div v-show="tab === 'typst'">
               <TypstSettings />

@@ -21,7 +21,6 @@ export interface AppSettings {
   previewVisible: boolean;
 
   // App
-  colorScheme: "dark" | "light";
   uiFontSize: number;
   lastOpenedPath: string | null;
   recentPaths: string[];
@@ -41,7 +40,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   previewWidth: 400,
   fileTreeVisible: true,
   previewVisible: true,
-  colorScheme: "dark",
   uiFontSize: 13,
   lastOpenedPath: null,
   recentPaths: [],

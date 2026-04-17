@@ -38,8 +38,6 @@ pub struct AppSettings {
     pub preview_visible: bool,
 
     // App
-    #[serde(default = "default_color_scheme")]
-    pub color_scheme: String,
     #[serde(default = "default_ui_font_size")]
     pub ui_font_size: u32,
     #[serde(default)]
@@ -61,7 +59,6 @@ fn default_preview_mode() -> String { "realtime".to_string() }
 fn default_debounce_ms() -> u32 { 500 }
 fn default_file_tree_width() -> u32 { 250 }
 fn default_preview_width() -> u32 { 400 }
-fn default_color_scheme() -> String { "dark".to_string() }
 fn default_ui_font_size() -> u32 { 13 }
 
 impl Default for AppSettings {
@@ -79,7 +76,6 @@ impl Default for AppSettings {
             preview_width: default_preview_width(),
             file_tree_visible: true,
             preview_visible: true,
-            color_scheme: default_color_scheme(),
             ui_font_size: default_ui_font_size(),
             last_opened_path: None,
             recent_paths: vec![],
@@ -141,6 +137,36 @@ pub async fn save_settings(settings: AppSettings) -> Result<(), String> {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ThemeColors {
+    // App UI (defaults provided so themes saved before the UI fields existed
+    // still load — they fall back to dark-theme UI tokens.)
+    #[serde(default = "default_ui_app_background")]
+    pub app_background: String,
+    #[serde(default = "default_ui_surface")]
+    pub surface: String,
+    #[serde(default = "default_ui_surface_variant")]
+    pub surface_variant: String,
+    #[serde(default = "default_ui_border")]
+    pub border: String,
+    #[serde(default = "default_ui_text")]
+    pub ui_text: String,
+    #[serde(default = "default_ui_text_muted")]
+    pub ui_text_muted: String,
+    #[serde(default = "default_ui_primary")]
+    pub primary: String,
+    #[serde(default = "default_ui_status_bar")]
+    pub status_bar: String,
+    #[serde(default = "default_ui_status_bar_text")]
+    pub status_bar_text: String,
+    #[serde(default = "default_ui_error")]
+    pub error: String,
+    #[serde(default = "default_ui_warning")]
+    pub warning: String,
+    #[serde(default = "default_ui_info")]
+    pub info: String,
+    #[serde(default = "default_ui_success")]
+    pub success: String,
+
+    // Editor pane
     pub background: String,
     pub foreground: String,
     pub caret: String,
@@ -148,6 +174,8 @@ pub struct ThemeColors {
     pub line_highlight: String,
     pub gutter_background: String,
     pub gutter_foreground: String,
+
+    // Syntax tokens
     pub heading: String,
     pub emphasis: String,
     pub strong: String,
@@ -163,6 +191,20 @@ pub struct ThemeColors {
     pub bracket: String,
 }
 
+fn default_ui_app_background() -> String { "#1e1e2e".to_string() }
+fn default_ui_surface() -> String { "#181825".to_string() }
+fn default_ui_surface_variant() -> String { "#313244".to_string() }
+fn default_ui_border() -> String { "rgba(205, 214, 244, 0.12)".to_string() }
+fn default_ui_text() -> String { "#cdd6f4".to_string() }
+fn default_ui_text_muted() -> String { "rgba(205, 214, 244, 0.6)".to_string() }
+fn default_ui_primary() -> String { "#9e9e9e".to_string() }
+fn default_ui_status_bar() -> String { "#239dad".to_string() }
+fn default_ui_status_bar_text() -> String { "#ffffff".to_string() }
+fn default_ui_error() -> String { "#ef5350".to_string() }
+fn default_ui_warning() -> String { "#fab387".to_string() }
+fn default_ui_info() -> String { "#89dceb".to_string() }
+fn default_ui_success() -> String { "#a6e3a1".to_string() }
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Theme {
@@ -170,6 +212,8 @@ pub struct Theme {
     pub name: String,
     #[serde(default)]
     pub built_in: bool,
+    #[serde(default = "default_true")]
+    pub is_dark: bool,
     pub colors: ThemeColors,
 }
 
@@ -179,7 +223,21 @@ fn built_in_themes() -> Vec<Theme> {
             id: "zenypst-dark".to_string(),
             name: "Zenypst Dark".to_string(),
             built_in: true,
+            is_dark: true,
             colors: ThemeColors {
+                app_background: "#1e1e2e".to_string(),
+                surface: "#181825".to_string(),
+                surface_variant: "#313244".to_string(),
+                border: "rgba(205, 214, 244, 0.12)".to_string(),
+                ui_text: "#cdd6f4".to_string(),
+                ui_text_muted: "rgba(205, 214, 244, 0.6)".to_string(),
+                primary: "#9e9e9e".to_string(),
+                status_bar: "#239dad".to_string(),
+                status_bar_text: "#ffffff".to_string(),
+                error: "#ef5350".to_string(),
+                warning: "#fab387".to_string(),
+                info: "#89dceb".to_string(),
+                success: "#a6e3a1".to_string(),
                 background: "#1e1e2e".to_string(),
                 foreground: "#cdd6f4".to_string(),
                 caret: "#f5e0dc".to_string(),
@@ -206,7 +264,21 @@ fn built_in_themes() -> Vec<Theme> {
             id: "zenypst-light".to_string(),
             name: "Zenypst Light".to_string(),
             built_in: true,
+            is_dark: false,
             colors: ThemeColors {
+                app_background: "#eff1f5".to_string(),
+                surface: "#e6e9f0".to_string(),
+                surface_variant: "#dce0e8".to_string(),
+                border: "rgba(76, 79, 105, 0.16)".to_string(),
+                ui_text: "#4c4f69".to_string(),
+                ui_text_muted: "rgba(76, 79, 105, 0.6)".to_string(),
+                primary: "#616161".to_string(),
+                status_bar: "#1e66f5".to_string(),
+                status_bar_text: "#ffffff".to_string(),
+                error: "#d20f39".to_string(),
+                warning: "#fe640b".to_string(),
+                info: "#04a5e5".to_string(),
+                success: "#40a02b".to_string(),
                 background: "#eff1f5".to_string(),
                 foreground: "#4c4f69".to_string(),
                 caret: "#dc8a78".to_string(),
@@ -233,7 +305,21 @@ fn built_in_themes() -> Vec<Theme> {
             id: "solarized-dark".to_string(),
             name: "Solarized Dark".to_string(),
             built_in: true,
+            is_dark: true,
             colors: ThemeColors {
+                app_background: "#002b36".to_string(),
+                surface: "#073642".to_string(),
+                surface_variant: "#0d4a5b".to_string(),
+                border: "rgba(131, 148, 150, 0.18)".to_string(),
+                ui_text: "#93a1a1".to_string(),
+                ui_text_muted: "rgba(147, 161, 161, 0.6)".to_string(),
+                primary: "#268bd2".to_string(),
+                status_bar: "#073642".to_string(),
+                status_bar_text: "#93a1a1".to_string(),
+                error: "#dc322f".to_string(),
+                warning: "#cb4b16".to_string(),
+                info: "#268bd2".to_string(),
+                success: "#859900".to_string(),
                 background: "#002b36".to_string(),
                 foreground: "#839496".to_string(),
                 caret: "#839496".to_string(),

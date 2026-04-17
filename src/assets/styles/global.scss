@@ -47,33 +47,9 @@
 
   --zen-on-surface-medium: rgba(205, 214, 244, 0.6);
   --zen-on-surface-disabled: rgba(205, 214, 244, 0.38);
-}
 
-/* Light scheme overrides — applied via body class */
-body.zen-light {
-  --zen-background: #eff1f5;
-  --zen-surface: #e6e9f0;
-  --zen-surface-variant: #dce0e8;
-
-  --zen-on-surface: #4c4f69;
-  --zen-on-surface-rgb: 76, 79, 105;
-
-  --zen-primary: #616161;
-  --zen-primary-rgb: 97, 97, 97;
-  --zen-secondary: #1e66f5;
-
-  --zen-error: #d20f39;
-  --zen-error-rgb: 210, 15, 57;
-  --zen-warning: #fe640b;
-  --zen-warning-rgb: 254, 100, 11;
-  --zen-info: #04a5e5;
-  --zen-info-rgb: 4, 165, 229;
-  --zen-success: #40a02b;
-
-  --zen-border: rgba(76, 79, 105, 0.16);
-
-  --zen-on-surface-medium: rgba(76, 79, 105, 0.6);
-  --zen-on-surface-disabled: rgba(76, 79, 105, 0.38);
+  --zen-statusbar: #239dad;
+  --zen-statusbar-text: #ffffff;
 }
 
 html, body, #app {

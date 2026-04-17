@@ -81,30 +81,24 @@ const previewModeLabel = computed(() => {
 .status-bar {
   height: var(--statusbar-height);
   min-height: var(--statusbar-height);
-  background: #239dad;
-  color: #ffffff;
+  background: var(--zen-statusbar);
+  color: var(--zen-statusbar-text);
   font-size: var(--ui-font-size-xs);
   flex-shrink: 0;
   overflow: hidden;
 }
 
 .status-bar .text-medium-emphasis {
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: color-mix(in srgb, var(--zen-statusbar-text) 70%, transparent) !important;
 }
 
-.status-bar .text-success {
-  color: #a6e3a1 !important;
-}
-
-.status-bar .text-error {
-  color: #ffffff !important;
+.status-bar .text-success,
+.status-bar .text-error,
+.status-bar .text-info {
+  color: var(--zen-statusbar-text) !important;
 }
 
 .status-bar__file {
   max-width: 40%;
-}
-
-.status-bar .text-info {
-  color: #89dceb !important;
 }
 </style>

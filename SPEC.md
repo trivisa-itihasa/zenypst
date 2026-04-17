@@ -360,9 +360,21 @@ interface AppSettings {
   previewVisible: boolean;   // default: true
 
   // App
-  colorScheme: "dark" | "light"; // default: "dark"
+  uiFontSize: number;        // default: 13 (UI chrome font size, px)
   lastOpenedPath: string | null; // Restore last session
   recentPaths: string[];     // Recent files/folders list
+}
+```
+
+App-wide light/dark behavior is no longer a separate setting — every visual aspect is driven by the active **Theme**. Each theme carries an `isDark` flag (which controls Quasar's component defaults) plus a full set of UI color tokens (app background, surface, status bar, primary/error/warning/info/success, etc.) alongside the editor and syntax tokens. Switching themes therefore re-skins the entire app, not just the editor.
+
+```ts
+interface Theme {
+  id: string;
+  name: string;
+  builtIn: boolean;
+  isDark: boolean;
+  colors: ThemeColors; // App UI + Editor + Syntax tokens, see types/theme.ts
 }
 ```
 
