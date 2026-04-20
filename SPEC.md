@@ -296,6 +296,7 @@ User edits in CodeMirror 6
 - **Panel collapsing**: Double-click a splitter or use View menu to collapse/expand panels.
 - **Color scheme**: Use Quasar's Dark plugin with a dark theme by default (consistent with the editor's dark theme). Support light mode toggle.
 - **Toolbar**: Flat menu bar with items: File (New, Open File, Open Folder, Save, Save As), Edit (Undo, Redo, Find, Replace), View (Toggle File Tree, Toggle Preview, Zoom In/Out), Settings (open settings dialog), Help (About, Keyboard Shortcuts).
+- **About / update check**: The app-icon button on the left of the toolbar opens the About dialog. The dialog queries `https://api.github.com/repos/trivisa-itihasa/zenypst/releases/latest` on open (with a 5-minute in-memory cache) and compares `tag_name` with the runtime version returned by `@tauri-apps/api/app` `getVersion()`. When a newer release exists, a badge appears on the app-icon and the dialog shows an "Update available" section with a button that opens the release page in the default browser via `@tauri-apps/plugin-shell` `open()`. No in-place auto-update is performed — the user downloads the new installer from GitHub.
 - **Status bar** (bottom): Show current file path, line:column, Typst compile status (idle / compiling / error count), selected preview mode indicator.
 
 ---

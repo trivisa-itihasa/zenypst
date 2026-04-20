@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open as openShell } from "@tauri-apps/plugin-shell";
 import { Notify } from "quasar";
 import { useI18n } from "vue-i18n";
 import appIconUrl from "@/assets/icons/icon-str.svg";
 import { useFileOps } from "@/composables/useFileOps";
 import { useCompiler } from "@/composables/useCompiler";
+import { useVersionCheck } from "@/composables/useVersionCheck";
 import { useSettingsStore } from "@/stores/settings";
 import { useEditorStore } from "@/stores/editor";
 import { getDirectory } from "@/utils/path";
@@ -46,6 +48,34 @@ async function closeWindow(): Promise<void> {
 }
 
 const aboutDialog = ref(false);
+
+const {
+  currentVersion,
+  latestVersion,
+  releaseUrl,
+  status: updateStatus,
+  errorMessage: updateError,
+  isUpdateAvailable,
+  checkForUpdates,
+} = useVersionCheck();
+
+// Kick off a silent check on startup so the app-icon can show a hint.
+onMounted(() => {
+  void checkForUpdates();
+});
+
+// Re-check (respecting the cache) whenever the About dialog is opened.
+watch(aboutDialog, (open) => {
+  if (open) void checkForUpdates();
+});
+
+async function openReleasePage(): Promise<void> {
+  try {
+    await openShell(releaseUrl.value);
+  } catch (err) {
+    notify(t("toolbar.updateOpenFailed", { msg: String(err) }));
+  }
+}
 
 function notify(message: string, type: "negative" | "positive" = "negative"): void {
   Notify.create({ message, type, position: "bottom", timeout: 4000 });
@@ -100,8 +130,13 @@ async function handleExportPdf(): Promise<void> {
 <template>
   <div class="toolbar d-flex align-center" data-tauri-drag-region>
     <div class="toolbar-logo">
-      <button class="icon-btn" @click="aboutDialog = true" :title="t('toolbar.aboutZenypst')">
+      <button
+        class="icon-btn"
+        @click="aboutDialog = true"
+        :title="isUpdateAvailable ? t('toolbar.updateAvailableTooltip', { version: latestVersion }) : t('toolbar.aboutZenypst')"
+      >
         <img :src="appIconUrl" class="app-icon" alt="Zenypst" />
+        <span v-if="isUpdateAvailable" class="update-badge" aria-hidden="true"></span>
       </button>
     </div>
 
@@ -171,10 +206,69 @@ async function handleExportPdf(): Promise<void> {
       </q-card-section>
       <q-card-section>
         <p class="mb-2">{{ t('toolbar.aboutDescription') }}</p>
-        <p class="text-caption text-medium-emphasis">{{ t('toolbar.aboutVersion') }}</p>
+        <p class="text-caption text-medium-emphasis">
+          {{ t('toolbar.versionLabel', { version: currentVersion ?? '—' }) }}
+        </p>
         <p class="text-caption text-medium-emphasis">{{ t('toolbar.aboutBuiltWith') }}</p>
+
+        <div class="update-section q-mt-md">
+          <div v-if="updateStatus === 'checking'" class="d-flex align-center gap-2">
+            <q-spinner size="14px" />
+            <span class="text-caption">{{ t('toolbar.updateChecking') }}</span>
+          </div>
+          <div v-else-if="isUpdateAvailable" class="update-available">
+            <div class="d-flex align-center gap-2 mb-1">
+              <q-icon name="mdi-download-circle" size="18px" color="primary" />
+              <span class="text-body-2">
+                {{ t('toolbar.updateAvailable', { version: latestVersion }) }}
+              </span>
+            </div>
+            <p class="text-caption text-medium-emphasis q-mb-sm">
+              {{ t('toolbar.updateOpenHint') }}
+            </p>
+            <q-btn
+              color="primary"
+              unelevated
+              no-caps
+              size="sm"
+              icon="mdi-open-in-new"
+              :label="t('toolbar.updateDownload')"
+              @click="openReleasePage"
+            />
+          </div>
+          <div v-else-if="updateStatus === 'ok'" class="d-flex align-center gap-2">
+            <q-icon name="mdi-check-circle" size="16px" color="positive" />
+            <span class="text-caption text-medium-emphasis">{{ t('toolbar.updateUpToDate') }}</span>
+          </div>
+          <div v-else-if="updateStatus === 'no-release'" class="text-caption text-medium-emphasis">
+            {{ t('toolbar.updateNoRelease') }}
+          </div>
+          <div v-else-if="updateStatus === 'error'" class="update-error">
+            <div class="text-caption text-negative q-mb-xs">
+              {{ t('toolbar.updateCheckFailed', { msg: updateError ?? '' }) }}
+            </div>
+            <q-btn
+              flat
+              dense
+              no-caps
+              size="sm"
+              icon="mdi-refresh"
+              :label="t('toolbar.updateRetry')"
+              @click="checkForUpdates(true)"
+            />
+          </div>
+        </div>
       </q-card-section>
       <q-card-actions align="right">
+        <q-btn
+          v-if="updateStatus !== 'checking' && !isUpdateAvailable"
+          flat
+          dense
+          no-caps
+          size="sm"
+          :label="t('toolbar.updateCheckAgain')"
+          @click="checkForUpdates(true)"
+        />
         <q-btn flat :label="t('common.close')" @click="aboutDialog = false" />
       </q-card-actions>
     </q-card>
@@ -199,6 +293,7 @@ async function handleExportPdf(): Promise<void> {
 }
 
 .icon-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -210,6 +305,23 @@ async function handleExportPdf(): Promise<void> {
   background: transparent;
   cursor: pointer;
   border-radius: 6px;
+}
+
+.update-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--q-primary, #1976d2);
+  box-shadow: 0 0 0 2px var(--zen-surface);
+  pointer-events: none;
+}
+
+.update-section {
+  border-top: 1px solid var(--zen-border);
+  padding-top: 12px;
 }
 
 .icon-btn:hover {
