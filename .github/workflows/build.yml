@@ -60,8 +60,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('manual-{0}', github.run_number) }}
-          releaseName: ${{ github.ref_type == 'tag' && format('Zenypst {0}', github.ref_name) || format('Zenypst Manual Build #{0}', github.run_number) }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "Zenypst ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
