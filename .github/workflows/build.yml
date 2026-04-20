@@ -68,13 +68,14 @@ jobs:
 
   update-release-notes:
     needs: build
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       - name: Update release body with platform guide
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="app-v${{ github.run_number }}"
+          TAG="${{ github.ref_name }}"
           gh release edit "$TAG" \
             --repo "${{ github.repository }}" \
             --notes "$(cat <<'BODY'
