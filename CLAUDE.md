@@ -40,12 +40,56 @@ npm run dev       # Vite only (no Tauri IPC, for UI work from browser)
 ## Git & GitHub
 
 - Remote: `https://github.com/trivisa-itihasa/zenypst.git`
-- Default branch: `main`
-- Push using token stored in `~/.gitconfig_local` (URL rewrite):
-  ```bash
-  git -c include.path=/home/gecko/.gitconfig_local push origin main
-  ```
-- Multi-platform CI builds via GitHub Actions (`.github/workflows/build.yml`) — Windows/macOS/Ubuntu artifacts published as draft Releases
+- Branch strategy:
+  - `main` — release branch. Always represents the latest released build.
+  - `dev` — development branch. **デフォルトのpush先はここ。** ユーザーから明示的に `main` への push を指示されない限り、コミット・push はすべて `dev` に対して行う。
+- Push 認証: トークンは `~/.gitconfig_local` の URL 書き換えルールで保持。push 時は `-c include.path=...` を付与する。
+- CI: GitHub Actions (`.github/workflows/build.yml`) は `v*` タグの push もしくは `workflow_dispatch` でのみ起動。Windows/macOS/Ubuntu 用成果物が draft Release として公開される。通常の `dev`/`main` への push ではビルドは走らない。
+
+### Claude Code カスタムコマンド
+
+以下の手順は `.claude/commands/` にスラッシュコマンドとして登録済み。Claude Code セッション内では下記コマンドで実行できる:
+
+- `/push-dev [commit message]` — 通常開発フロー（下記）を一括実行
+- `/release vX.Y.Z` — リリースフロー（下記）を一括実行（`vX.Y.Z` 必須）
+
+### 通常開発: dev への push
+
+```bash
+# 作業前: dev に切り替えて最新化
+git checkout dev
+git pull origin dev
+
+# 変更をコミット
+git add <files>
+git commit -m "..."
+
+# push（dev へ）
+git -c include.path=/home/gecko/.gitconfig_local push origin dev
+```
+
+### リリース: dev → main マージしてタグ push
+
+```bash
+# main を最新化
+git checkout main
+git pull origin main
+
+# dev をマージ（履歴を残すため --no-ff 推奨）
+git merge --no-ff dev
+
+# バージョンタグを打つ（vX.Y.Z 形式必須 — CI のトリガ条件）
+git tag -a v0.1.0 -m "Release v0.1.0"
+
+# main とタグを同時に push（--follow-tags でタグも一緒に送る）
+git -c include.path=/home/gecko/.gitconfig_local push --follow-tags origin main
+
+# 戻って dev で作業継続
+git checkout dev
+git merge main   # main にあるマージコミットを dev に同期
+```
+
+タグ push がトリガとなり、CI が走り、3 プラットフォーム分の成果物が GitHub の draft Release として作られる。リリースノートを書いて publish すれば配布完了。
 
 ---
 

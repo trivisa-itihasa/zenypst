@@ -118,9 +118,7 @@ export default {
     editor: "Editor",
     theme: "Theme",
     preview: "Preview",
-    appearance: "Appearance",
     typst: "Typst",
-    darkMode: "Dark Mode",
   },
 
   // Font settings
@@ -135,13 +133,32 @@ export default {
 
   // Theme editor
   themeEditor: {
-    syntaxTheme: "Syntax Theme",
+    theme: "Theme",
     newTheme: "New Theme",
     builtIn: "Built-in",
     editTheme: "Edit Theme",
     themeName: "Theme Name",
     deleteTheme: "Delete Theme?",
-    // Color field labels
+    isDark: "Dark theme (affects UI component defaults)",
+    // Section headers
+    sectionUi: "App UI",
+    sectionEditor: "Editor",
+    sectionSyntax: "Syntax",
+    // App UI fields
+    appBackground: "App Background",
+    surface: "Surface",
+    surfaceVariant: "Surface Variant",
+    border: "Border",
+    uiText: "UI Text",
+    uiTextMuted: "UI Text (muted)",
+    primary: "Primary / Accent",
+    statusBar: "Status Bar",
+    statusBarText: "Status Bar Text",
+    error: "Error",
+    warning: "Warning",
+    info: "Info",
+    success: "Success",
+    // Editor fields
     background: "Background",
     text: "Text",
     cursor: "Cursor",
@@ -149,6 +166,7 @@ export default {
     lineHighlight: "Line Highlight",
     gutterBackground: "Gutter Background",
     gutterText: "Gutter Text",
+    // Syntax fields
     heading: "Heading",
     italic: "Italic",
     bold: "Bold",

@@ -20,6 +20,7 @@ export function useTheme() {
         id: "zenypst-dark",
         name: "Zenypst Dark",
         builtIn: true,
+        isDark: true,
         colors: DEFAULT_DARK_COLORS,
       }
     );
