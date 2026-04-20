@@ -65,3 +65,29 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  update-release-notes:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update release body with platform guide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="app-v${{ github.run_number }}"
+          gh release edit "$TAG" \
+            --repo "${{ github.repository }}" \
+            --notes "$(cat <<'BODY'
+          ## Download Guide
+
+          | File | Platform | Description |
+          |------|----------|-------------|
+          | `Zenypst_*_universal.dmg` | **macOS** (Apple Silicon + Intel) | Disk image installer |
+          | `Zenypst.app.tar.gz` | **macOS** (Apple Silicon + Intel) | App bundle (for Sparkle updater) |
+          | `Zenypst_*_x64-setup.exe` | **Windows** (64-bit) | NSIS installer |
+          | `Zenypst_*_x64_en-US.msi` | **Windows** (64-bit) | MSI installer |
+          | `zenypst_*_amd64.deb` | **Linux** (Debian/Ubuntu, 64-bit) | Debian package |
+          | `zenypst_*_amd64.AppImage` | **Linux** (64-bit) | Portable AppImage |
+          BODY
+          )"
+

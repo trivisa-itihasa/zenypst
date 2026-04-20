@@ -13,19 +13,26 @@ import TemplateManager from "@/components/template/TemplateManager.vue";
 
 import { useI18n } from "vue-i18n";
 import { useSettingsStore } from "@/stores/settings";
+import { useEditorStore } from "@/stores/editor";
 import { useFileTreeStore } from "@/stores/fileTree";
 import { useFileOps } from "@/composables/useFileOps";
 import { useCompiler } from "@/composables/useCompiler";
 import { useTheme } from "@/composables/useTheme";
 import { useKeybindings } from "@/composables/useKeybindings";
 import { useTemplateStore } from "@/stores/template";
+import { getDirectory } from "@/utils/path";
+import { Notify } from "quasar";
 import type { Template } from "@/types";
+
+const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const isMac = navigator.platform.toUpperCase().includes("MAC");
 
 const { t } = useI18n();
 
 const settingsStore = useSettingsStore();
+const editorStore = useEditorStore();
 const fileOps = useFileOps();
-const { stopWatcher } = useCompiler();
+const { stopWatcher, triggerCompile, exportPdf } = useCompiler();
 const { loadThemes } = useTheme();
 const templateStore = useTemplateStore();
 
@@ -152,6 +159,7 @@ onUnmounted(async () => {
   document.removeEventListener("mouseup", onMouseUp);
   document.body.style.cursor = "";
   (document.body.style as CSSStyleDeclaration & { userSelect: string }).userSelect = "";
+  menuUnlisteners.forEach((fn) => fn());
   await stopWatcher();
 });
 
@@ -167,6 +175,38 @@ watch(
   [() => settingsStore.settings.fontFamily, () => settingsStore.settings.fontFamilyFallback],
   applyUiFont
 );
+
+async function handleMenuSave(): Promise<void> {
+  await fileOps.saveActiveFile();
+  if (settingsStore.settings.previewMode === "on_save") {
+    await triggerCompile();
+  }
+}
+
+async function handleMenuExportPdf(): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  const tab = editorStore.activeTab;
+  if (!tab) return;
+
+  const defaultName = tab.name.replace(/\.typ$/, "") + ".pdf";
+  const outputPath = await invoke<string | null>("save_file_dialog", { defaultName });
+  if (!outputPath) return;
+
+  const root = tab.path ? getDirectory(tab.path) : undefined;
+  try {
+    const result = await exportPdf(tab.content, root, outputPath);
+    if (result.success) {
+      Notify.create({ message: t("toolbar.pdfExportedSuccessfully"), type: "positive", position: "bottom", timeout: 4000 });
+    } else {
+      const msg = result.errors.map((e) => e.message).join("; ");
+      Notify.create({ message: t("toolbar.exportFailed", { msg }), type: "negative", position: "bottom", timeout: 4000 });
+    }
+  } catch (err) {
+    Notify.create({ message: t("toolbar.exportFailed", { msg: String(err) }), type: "negative", position: "bottom", timeout: 4000 });
+  }
+}
+
+const menuUnlisteners: Array<() => void> = [];
 
 onMounted(async () => {
   await settingsStore.load();
@@ -187,6 +227,24 @@ onMounted(async () => {
   window.addEventListener("zenypst:new-file", () => {
     templatePickerDialog.value = true;
   });
+
+  // Listen for native menu events (Tauri only)
+  if (isTauri) {
+    const { listen } = await import("@tauri-apps/api/event");
+    const handlers: Record<string, () => void | Promise<void>> = {
+      "new-file": () => { templatePickerDialog.value = true; },
+      "open-file": () => { fileOps.openFileDialog(); },
+      "open-folder": () => { fileOps.openFolderDialog(); },
+      "save": () => { handleMenuSave(); },
+      "save-as": () => { fileOps.saveAsActiveFile(); },
+      "export-pdf": () => { handleMenuExportPdf(); },
+      "manage-templates": () => { templateManagerDialog.value = true; },
+    };
+    for (const [event, handler] of Object.entries(handlers)) {
+      const unlisten = await listen(event, handler);
+      menuUnlisteners.push(unlisten);
+    }
+  }
 });
 
 async function handleTemplateSelected(template: Template): Promise<void> {
@@ -217,8 +275,9 @@ async function togglePreview(): Promise<void> {
 </script>
 
 <template>
-  <div class="app-shell d-flex flex-column fill-height">
+  <div class="app-shell d-flex flex-column fill-height" :class="{ 'app-shell--native-menu': isMac }">
     <Toolbar
+      v-if="!isMac"
       @new-file="templatePickerDialog = true"
       @open-templates="templateManagerDialog = true"
     />
@@ -381,8 +440,8 @@ async function togglePreview(): Promise<void> {
 }
 
 .typst-not-found-bar {
-  height: var(--toolbar-height);
-  min-height: var(--toolbar-height);
+  height: 34px;
+  min-height: 34px;
   background: rgba(var(--zen-warning-rgb), 0.15);
   border-bottom: 1px solid rgba(var(--zen-warning-rgb), 0.4);
   flex-shrink: 0;
@@ -391,5 +450,10 @@ async function togglePreview(): Promise<void> {
   a {
     color: var(--zen-warning);
   }
+}
+
+/* On macOS with native menu bar, no custom toolbar is shown */
+.app-shell--native-menu {
+  --toolbar-height: 0px;
 }
 </style>
