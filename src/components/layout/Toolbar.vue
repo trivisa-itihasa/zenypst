@@ -2,7 +2,6 @@
 import { ref, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { open as openShell } from "@tauri-apps/plugin-shell";
 import { Notify } from "quasar";
 import { useI18n } from "vue-i18n";
 import appIconUrl from "@/assets/icons/icon-str.svg";
@@ -52,11 +51,13 @@ const aboutDialog = ref(false);
 const {
   currentVersion,
   latestVersion,
-  releaseUrl,
   status: updateStatus,
   errorMessage: updateError,
   isUpdateAvailable,
+  downloadProgress,
   checkForUpdates,
+  downloadAndInstall,
+  restartApp,
 } = useVersionCheck();
 
 // Kick off a silent check on startup so the app-icon can show a hint.
@@ -68,14 +69,6 @@ onMounted(() => {
 watch(aboutDialog, (open) => {
   if (open) void checkForUpdates();
 });
-
-async function openReleasePage(): Promise<void> {
-  try {
-    await openShell(releaseUrl.value);
-  } catch (err) {
-    notify(t("toolbar.updateOpenFailed", { msg: String(err) }));
-  }
-}
 
 function notify(message: string, type: "negative" | "positive" = "negative"): void {
   Notify.create({ message, type, position: "bottom", timeout: 4000 });
@@ -216,32 +209,50 @@ async function handleExportPdf(): Promise<void> {
             <q-spinner size="14px" />
             <span class="text-caption">{{ t('toolbar.updateChecking') }}</span>
           </div>
-          <div v-else-if="isUpdateAvailable" class="update-available">
+          <div v-else-if="updateStatus === 'available'" class="update-available">
             <div class="d-flex align-center gap-2 mb-1">
               <q-icon name="mdi-download-circle" size="18px" color="primary" />
               <span class="text-body-2">
                 {{ t('toolbar.updateAvailable', { version: latestVersion }) }}
               </span>
             </div>
-            <p class="text-caption text-medium-emphasis q-mb-sm">
-              {{ t('toolbar.updateOpenHint') }}
-            </p>
             <q-btn
               color="primary"
               unelevated
               no-caps
               size="sm"
-              icon="mdi-open-in-new"
-              :label="t('toolbar.updateDownload')"
-              @click="openReleasePage"
+              icon="mdi-download"
+              :label="t('toolbar.updateInstall')"
+              @click="downloadAndInstall"
             />
           </div>
-          <div v-else-if="updateStatus === 'ok'" class="d-flex align-center gap-2">
+          <div v-else-if="updateStatus === 'downloading'" class="update-downloading">
+            <div class="d-flex align-center gap-2 mb-2">
+              <q-spinner size="14px" />
+              <span class="text-caption">
+                {{ t('toolbar.updateDownloading', { progress: downloadProgress }) }}
+              </span>
+            </div>
+            <q-linear-progress :value="downloadProgress / 100" color="primary" size="4px" rounded />
+          </div>
+          <div v-else-if="updateStatus === 'ready'" class="update-ready">
+            <div class="d-flex align-center gap-2 mb-1">
+              <q-icon name="mdi-check-circle" size="18px" color="positive" />
+              <span class="text-body-2">{{ t('toolbar.updateReady') }}</span>
+            </div>
+            <q-btn
+              color="primary"
+              unelevated
+              no-caps
+              size="sm"
+              icon="mdi-restart"
+              :label="t('toolbar.updateRestart')"
+              @click="restartApp"
+            />
+          </div>
+          <div v-else-if="updateStatus === 'up-to-date'" class="d-flex align-center gap-2">
             <q-icon name="mdi-check-circle" size="16px" color="positive" />
             <span class="text-caption text-medium-emphasis">{{ t('toolbar.updateUpToDate') }}</span>
-          </div>
-          <div v-else-if="updateStatus === 'no-release'" class="text-caption text-medium-emphasis">
-            {{ t('toolbar.updateNoRelease') }}
           </div>
           <div v-else-if="updateStatus === 'error'" class="update-error">
             <div class="text-caption text-negative q-mb-xs">
@@ -261,7 +272,7 @@ async function handleExportPdf(): Promise<void> {
       </q-card-section>
       <q-card-actions align="right">
         <q-btn
-          v-if="updateStatus !== 'checking' && !isUpdateAvailable"
+          v-if="updateStatus !== 'checking' && updateStatus !== 'downloading' && !isUpdateAvailable"
           flat
           dense
           no-caps

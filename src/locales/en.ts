@@ -32,14 +32,14 @@ export default {
     updateChecking: "Checking for updates\u2026",
     updateAvailable: "Update available: v{version}",
     updateAvailableTooltip: "Update available (v{version})",
-    updateOpenHint: "Open the release page to download the latest build.",
-    updateDownload: "View release",
+    updateInstall: "Download & install",
+    updateDownloading: "Downloading\u2026 {progress}%",
+    updateReady: "Update installed. Restart to apply.",
+    updateRestart: "Restart now",
     updateUpToDate: "You\u2019re on the latest version.",
-    updateNoRelease: "No releases have been published yet.",
     updateCheckFailed: "Update check failed: {msg}",
     updateRetry: "Retry",
     updateCheckAgain: "Check for updates",
-    updateOpenFailed: "Could not open browser: {msg}",
   },
 
   // Activity bar
