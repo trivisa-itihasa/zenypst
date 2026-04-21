@@ -19,7 +19,6 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
-      "vue-i18n": "vue-i18n/dist/vue-i18n.esm-bundler.js",
     },
   },
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
