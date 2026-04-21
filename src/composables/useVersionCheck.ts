@@ -1,50 +1,27 @@
 import { ref, computed } from "vue";
 import { getVersion } from "@tauri-apps/api/app";
+import { check, type Update } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 
-const GITHUB_OWNER = "trivisa-itihasa";
-const GITHUB_REPO = "zenypst";
-const RELEASES_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`;
-const LATEST_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+type CheckStatus =
+  | "idle"
+  | "checking"
+  | "up-to-date"
+  | "available"
+  | "downloading"
+  | "ready"
+  | "error";
 
-interface GitHubRelease {
-  tag_name: string;
-  html_url: string;
-  name?: string;
-  prerelease?: boolean;
-  draft?: boolean;
-}
-
-type CheckStatus = "idle" | "checking" | "ok" | "no-release" | "error";
-
-const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const isTauri =
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 const currentVersion = ref<string | null>(null);
 const latestVersion = ref<string | null>(null);
-const releaseUrl = ref<string>(RELEASES_URL);
 const status = ref<CheckStatus>("idle");
 const errorMessage = ref<string | null>(null);
+const downloadProgress = ref(0); // 0-100
+let pendingUpdate: Update | null = null;
 let lastCheckAt = 0;
-
-function parseVersion(v: string): number[] {
-  return v
-    .replace(/^v/i, "")
-    .split("-")[0]
-    .split(".")
-    .map((n) => parseInt(n, 10) || 0);
-}
-
-function isNewer(latest: string, current: string): boolean {
-  const a = parseVersion(latest);
-  const b = parseVersion(current);
-  const len = Math.max(a.length, b.length);
-  for (let i = 0; i < len; i++) {
-    const x = a[i] ?? 0;
-    const y = b[i] ?? 0;
-    if (x > y) return true;
-    if (x < y) return false;
-  }
-  return false;
-}
 
 async function resolveCurrentVersion(): Promise<string> {
   if (currentVersion.value) return currentVersion.value;
@@ -61,39 +38,41 @@ async function resolveCurrentVersion(): Promise<string> {
 }
 
 export function useVersionCheck() {
-  const isUpdateAvailable = computed(() => {
-    if (status.value !== "ok") return false;
-    if (!latestVersion.value || !currentVersion.value) return false;
-    return isNewer(latestVersion.value, currentVersion.value);
-  });
+  const isUpdateAvailable = computed(
+    () => status.value === "available" || status.value === "ready",
+  );
 
   async function checkForUpdates(force = false): Promise<void> {
-    if (status.value === "checking") return;
-    // Cache: skip if checked within last 5 minutes unless forced
-    if (!force && status.value === "ok" && Date.now() - lastCheckAt < 5 * 60 * 1000) {
+    if (status.value === "checking" || status.value === "downloading") return;
+    if (
+      !force &&
+      (status.value === "up-to-date" || status.value === "available") &&
+      Date.now() - lastCheckAt < 5 * 60 * 1000
+    ) {
       return;
     }
+    if (!isTauri) {
+      status.value = "error";
+      errorMessage.value = "Updater is only available in the desktop app.";
+      return;
+    }
+
     status.value = "checking";
     errorMessage.value = null;
+
     try {
       await resolveCurrentVersion();
-      const res = await fetch(LATEST_API_URL, {
-        headers: { Accept: "application/vnd.github+json" },
-      });
-      if (res.status === 404) {
+      const update = await check();
+
+      if (update) {
+        pendingUpdate = update;
+        latestVersion.value = update.version;
+        status.value = "available";
+      } else {
+        pendingUpdate = null;
         latestVersion.value = null;
-        releaseUrl.value = RELEASES_URL;
-        status.value = "no-release";
-        lastCheckAt = Date.now();
-        return;
+        status.value = "up-to-date";
       }
-      if (!res.ok) {
-        throw new Error(`GitHub API responded with ${res.status}`);
-      }
-      const data = (await res.json()) as GitHubRelease;
-      latestVersion.value = data.tag_name.replace(/^v/i, "");
-      releaseUrl.value = data.html_url || RELEASES_URL;
-      status.value = "ok";
       lastCheckAt = Date.now();
     } catch (e) {
       errorMessage.value = e instanceof Error ? e.message : String(e);
@@ -101,13 +80,55 @@ export function useVersionCheck() {
     }
   }
 
+  async function downloadAndInstall(): Promise<void> {
+    if (!pendingUpdate) return;
+
+    status.value = "downloading";
+    downloadProgress.value = 0;
+
+    try {
+      let contentLength = 0;
+      let downloaded = 0;
+
+      await pendingUpdate.downloadAndInstall((event) => {
+        switch (event.event) {
+          case "Started":
+            contentLength = event.data.contentLength ?? 0;
+            break;
+          case "Progress":
+            downloaded += event.data.chunkLength;
+            if (contentLength > 0) {
+              downloadProgress.value = Math.round(
+                (downloaded / contentLength) * 100,
+              );
+            }
+            break;
+          case "Finished":
+            downloadProgress.value = 100;
+            break;
+        }
+      });
+
+      status.value = "ready";
+    } catch (e) {
+      errorMessage.value = e instanceof Error ? e.message : String(e);
+      status.value = "error";
+    }
+  }
+
+  async function restartApp(): Promise<void> {
+    await relaunch();
+  }
+
   return {
     currentVersion,
     latestVersion,
-    releaseUrl,
     status,
     errorMessage,
     isUpdateAvailable,
+    downloadProgress,
     checkForUpdates,
+    downloadAndInstall,
+    restartApp,
   };
 }
