@@ -78,7 +78,19 @@
       "Bash(brew install:*)",
       "Bash(gh auth:*)",
       "Bash(gh run:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "WebFetch(domain:v2.tauri.app)",
+      "Bash(mkdir -p ~/.tauri)",
+      "Bash(TAURI_SIGNING_PRIVATE_KEY_PASSWORD=\"\" npx tauri signer generate -w ~/.tauri/zenypst.key 2>&1 <<< \"\")",
+      "Bash(rm -f ~/.tauri/zenypst.key ~/.tauri/zenypst.key.pub)",
+      "Bash(expect -c ':*)",
+      "Bash(mv /Users/fujiwara/project/zenypst/src-tauri/~/.tauri/zenypst.key ~/.tauri/zenypst.key)",
+      "Bash(mv /Users/fujiwara/project/zenypst/src-tauri/~/.tauri/zenypst.key.pub ~/.tauri/zenypst.key.pub)",
+      "Bash(rm -rf /Users/fujiwara/project/zenypst/src-tauri/~/)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cargo doc:*)",
+      "Bash(ls ~/.cargo/registry/src/*/tauri-2*)",
+      "Bash(ls:*)"
     ]
   }
 }

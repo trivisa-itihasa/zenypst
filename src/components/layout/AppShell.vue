@@ -22,7 +22,7 @@ import { useKeybindings } from "@/composables/useKeybindings";
 import { useTemplateStore } from "@/stores/template";
 import { getDirectory } from "@/utils/path";
 import { Notify } from "quasar";
-import type { Template } from "@/types";
+import type { Template, UniverseTemplate } from "@/types";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 const isMac = navigator.platform.toUpperCase().includes("MAC");
@@ -31,6 +31,7 @@ const { t } = useI18n();
 
 const settingsStore = useSettingsStore();
 const editorStore = useEditorStore();
+const fileTreeStore = useFileTreeStore();
 const fileOps = useFileOps();
 const { stopWatcher, triggerCompile, exportPdf } = useCompiler();
 const { loadThemes } = useTheme();
@@ -42,6 +43,12 @@ const settingsDialog = ref(false);
 const templatePickerDialog = ref(false);
 const templateManagerDialog = ref(false);
 const typstNotFoundBar = ref(false);
+
+// Universe template project name dialog
+const projectNameDialog = ref(false);
+const projectName = ref("");
+const pendingUniverseTemplate = ref<UniverseTemplate | null>(null);
+const pendingParentDir = ref<string | null>(null);
 
 const MIN_FILE_TREE = 180;
 const MIN_PREVIEW = 200;
@@ -251,6 +258,52 @@ async function handleTemplateSelected(template: Template): Promise<void> {
   await fileOps.newFile(template.content, "untitled.typ");
 }
 
+async function handleUniverseTemplateSelected(template: UniverseTemplate): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  const parentDir = await invoke<string | null>("pick_folder");
+  if (!parentDir) return;
+
+  pendingUniverseTemplate.value = template;
+  pendingParentDir.value = parentDir;
+  projectName.value = template.name;
+  projectNameDialog.value = true;
+}
+
+async function confirmInitUniverseTemplate(): Promise<void> {
+  if (!pendingUniverseTemplate.value || !pendingParentDir.value) return;
+
+  const { join } = await import("@tauri-apps/api/path");
+  const template = pendingUniverseTemplate.value;
+  const targetDir = await join(pendingParentDir.value, projectName.value || template.name);
+
+  projectNameDialog.value = false;
+
+  try {
+    await templateStore.initUniverseTemplate(template.name, template.version, targetDir);
+    await fileTreeStore.loadDirectory(targetDir);
+    settingsStore.settings.lastOpenedPath = targetDir;
+    await settingsStore.save();
+
+    // Try to open the entrypoint file
+    const entryPath = await join(targetDir, template.entrypoint);
+    try {
+      await fileOps.openFile(entryPath);
+    } catch {
+      // If entrypoint doesn't exist, don't fail — user can open files manually
+    }
+  } catch (err) {
+    Notify.create({
+      message: t("appShell.universeTemplateInitFailed", { msg: String(err) }),
+      type: "negative",
+      position: "bottom",
+      timeout: 6000,
+    });
+  } finally {
+    pendingUniverseTemplate.value = null;
+    pendingParentDir.value = null;
+  }
+}
+
 async function handleOpenFile(path: string): Promise<void> {
   await fileOps.openFile(path);
 }
@@ -353,6 +406,7 @@ async function togglePreview(): Promise<void> {
     <TemplatePickerDialog
       v-model="templatePickerDialog"
       @selected="handleTemplateSelected"
+      @selected-universe="handleUniverseTemplateSelected"
     />
 
     <q-dialog v-model="templateManagerDialog">
@@ -366,6 +420,29 @@ async function togglePreview(): Promise<void> {
         <q-card-section>
           <TemplateManager />
         </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Universe template project name dialog -->
+    <q-dialog v-model="projectNameDialog" persistent>
+      <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
+        <q-card-section>
+          <div class="text-subtitle-2">{{ t('appShell.universeProjectNameTitle') }}</div>
+        </q-card-section>
+        <q-card-section>
+          <q-input
+            v-model="projectName"
+            :label="t('appShell.universeProjectNameLabel')"
+            outlined
+            dense
+            autofocus
+            @keyup.enter="confirmInitUniverseTemplate"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat :label="t('common.cancel')" @click="projectNameDialog = false" />
+          <q-btn flat color="primary" :label="t('common.create')" @click="confirmInitUniverseTemplate" />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </div>

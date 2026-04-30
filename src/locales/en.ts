@@ -68,6 +68,9 @@ export default {
     typstInstallSite: "typst.app",
     typstInstallSuffix: "and add to PATH.",
     templateManager: "Template Manager",
+    universeTemplateInitFailed: "Failed to initialize template: {msg}",
+    universeProjectNameTitle: "New Project",
+    universeProjectNameLabel: "Project name",
   },
 
   // File tree
@@ -217,6 +220,9 @@ export default {
     title: "New File \u2014 Choose Template",
     searchPlaceholder: "Search templates\u2026",
     noTemplatesFound: "No templates found",
+    localTab: "Local",
+    universeTab: "Typst Universe",
+    noDescription: "No description",
   },
 
   // Template manager
