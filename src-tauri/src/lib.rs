@@ -11,6 +11,7 @@ use commands::settings::{
 };
 use commands::template::{list_templates, save_template, delete_template};
 use commands::native_compile::{compile_native, export_pdf, get_typst_version, locate_source, NativeCompilerState};
+use commands::universe_template::{fetch_universe_templates, init_universe_template};
 
 #[cfg(target_os = "macos")]
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
@@ -142,6 +143,9 @@ pub fn run() {
             list_templates,
             save_template,
             delete_template,
+            // Universe template commands
+            fetch_universe_templates,
+            init_universe_template,
             // Settings commands
             load_settings,
             save_settings,

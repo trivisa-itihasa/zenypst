@@ -270,6 +270,7 @@ async function confirmNewFolder(): Promise<void> {
     <!-- Template picker for new file -->
     <TemplatePickerDialog
       v-model="newFileTemplatePicker"
+      :allow-universe="false"
       @selected="handleNewFileTemplateSelected"
     />
 

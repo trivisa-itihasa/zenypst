@@ -1,9 +1,12 @@
+use std::path::PathBuf;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Datetime};
 use typst::syntax::{FileId, Source, VirtualPath};
 use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
 use typst::{Library, LibraryExt, World};
+use typst_kit::download::{Downloader, ProgressSink};
+use typst_kit::package::PackageStorage;
 
 pub struct ZenypstWorld {
     library: LazyHash<Library>,
@@ -11,7 +14,8 @@ pub struct ZenypstWorld {
     fonts: Vec<Font>,
     main_id: FileId,
     source: Source,
-    root: Option<std::path::PathBuf>, // directory of the open file, for imports
+    root: Option<PathBuf>, // directory of the open file, for imports
+    package_storage: PackageStorage,
 }
 
 impl ZenypstWorld {
@@ -49,6 +53,9 @@ impl ZenypstWorld {
         let main_id = FileId::new(None, VirtualPath::new("main.typ"));
         let source = Source::new(main_id, String::new());
 
+        let downloader = Downloader::new("zenypst/0.2.3");
+        let package_storage = PackageStorage::new(None, None, downloader);
+
         Self {
             library: LazyHash::new(Library::default()),
             book: LazyHash::new(book),
@@ -56,12 +63,36 @@ impl ZenypstWorld {
             main_id,
             source,
             root: None,
+            package_storage,
         }
     }
 
-    pub fn set_source(&mut self, content: String, root: Option<std::path::PathBuf>) {
+    pub fn set_source(&mut self, content: String, root: Option<PathBuf>) {
         self.source = Source::new(self.main_id, content);
         self.root = root;
+    }
+
+    fn resolve_path(&self, id: FileId) -> Option<PathBuf> {
+        // Try local filesystem relative to root
+        if let Some(root) = &self.root {
+            let path = root.join(id.vpath().as_rootless_path());
+            if path.exists() {
+                return Some(path);
+            }
+        }
+
+        // Try package cache
+        if let Some(spec) = id.package() {
+            let progress = &mut ProgressSink;
+            if let Ok(package_path) = self.package_storage.prepare_package(spec, progress) {
+                let path = package_path.join(id.vpath().as_rootless_path());
+                if path.exists() {
+                    return Some(path);
+                }
+            }
+        }
+
+        None
     }
 }
 
@@ -82,9 +113,7 @@ impl World for ZenypstWorld {
         if id == self.main_id {
             return Ok(self.source.clone());
         }
-        // Try to read from filesystem relative to root
-        if let Some(root) = &self.root {
-            let path = root.join(id.vpath().as_rootless_path());
+        if let Some(path) = self.resolve_path(id) {
             if let Ok(text) = std::fs::read_to_string(&path) {
                 return Ok(Source::new(id, text));
             }
@@ -93,8 +122,7 @@ impl World for ZenypstWorld {
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        if let Some(root) = &self.root {
-            let path = root.join(id.vpath().as_rootless_path());
+        if let Some(path) = self.resolve_path(id) {
             if let Ok(data) = std::fs::read(&path) {
                 return Ok(Bytes::new(data));
             }
