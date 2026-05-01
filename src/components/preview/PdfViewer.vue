@@ -2,9 +2,10 @@
 import { ref, watch, onMounted, onUnmounted } from "vue";
 import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { invoke } from "@tauri-apps/api/core";
+import { readFile } from "@tauri-apps/plugin-fs";
 import { useI18n } from "vue-i18n";
 import { usePreviewStore } from "@/stores/preview";
 import { useEditorStore } from "@/stores/editor";
@@ -20,8 +21,15 @@ const pagesContainer = ref<HTMLElement | null>(null);
 const scale = ref(1.0);
 
 let currentPdf: PDFDocumentProxy | null = null;
+let currentBlobUrl: string | null = null;
 let renderToken = 0;
 let zoomTimer: ReturnType<typeof setTimeout> | null = null;
+let observer: IntersectionObserver | null = null;
+
+let pageObjects: PDFPageProxy[] = [];
+let pageWrappers: (HTMLElement | null)[] = [];
+let renderedPages = new Set<number>();
+let renderingPages = new Set<number>();
 
 // Ctrl+wheel zoom
 function onWheel(e: WheelEvent): void {
@@ -37,8 +45,13 @@ onMounted(() => {
 
 onUnmounted(() => {
   pagesContainer.value?.removeEventListener("wheel", onWheel);
+  observer?.disconnect();
   currentPdf?.destroy();
   currentPdf = null;
+  if (currentBlobUrl) {
+    URL.revokeObjectURL(currentBlobUrl);
+    currentBlobUrl = null;
+  }
 });
 
 interface SourceLocation {
@@ -67,49 +80,60 @@ async function handleTextLayerClick(e: MouseEvent, pageIndex: number, userScale:
   }
 }
 
-async function renderPages(pdf: PDFDocumentProxy, s: number, token: number): Promise<void> {
-  if (!pagesContainer.value) return;
+/** Limit canvas resolution to avoid GPU/Software rendering issues on WSLg */
+function getRenderScale(displayScale: number): number {
+  // Cap at 1.5x DPR on WSLg/WebKit to keep canvas size reasonable
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  return displayScale * Math.min(dpr, 1.5);
+}
 
-  const fragment = document.createDocumentFragment();
+async function renderPage(pageIndex: number, token: number): Promise<void> {
+  if (token !== renderToken) return;
+  if (renderedPages.has(pageIndex) || renderingPages.has(pageIndex)) return;
 
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    if (token !== renderToken) return;
+  const page = pageObjects[pageIndex];
+  if (!page) return;
 
-    const page = await pdf.getPage(pageNum);
+  renderingPages.add(pageIndex);
+  try {
+    const wrapper = pageWrappers[pageIndex];
+    if (!wrapper) return;
 
-    // Use separate viewports: high-res for canvas, display-res for text layer & CSS size
+    const s = scale.value;
     const displayViewport = page.getViewport({ scale: s });
-    const renderViewport = page.getViewport({ scale: s * 2 });
+    const renderViewport = page.getViewport({ scale: getRenderScale(s) });
 
-    // Page wrapper (relative-positioned so text layer can overlay)
-    const wrapper = document.createElement("div");
-    wrapper.style.cssText = [
-      "position: relative",
-      `width: ${displayViewport.width}px`,
-      `height: ${displayViewport.height}px`,
-      "margin: 8px auto",
-      "box-shadow: 0 2px 8px rgba(0,0,0,0.3)",
-      "overflow: hidden",
-    ].join(";");
-    // pdfjs-dist 4.x TextLayer uses var(--scale-factor) to position text spans
-    wrapper.style.setProperty("--scale-factor", String(s));
+    wrapper.innerHTML = "";
+    wrapper.style.background = "#fff";
 
-    // Canvas (rendered at 2x for sharpness)
     const canvas = document.createElement("canvas");
     canvas.width = renderViewport.width;
     canvas.height = renderViewport.height;
-    canvas.style.cssText = `display:block;width:100%;height:100%;`;
+    canvas.style.cssText = "display:block;width:100%;height:100%;";
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) continue;
-    await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) {
+      console.error(`[PDF] No 2D context for page ${pageIndex}`);
+      return;
+    }
+
+    console.log(`[PDF] Rendering page ${pageIndex + 1} at ${canvas.width}x${canvas.height}`);
+    const renderTask = page.render({ canvasContext: ctx, viewport: renderViewport });
+    await renderTask.promise;
+    console.log(`[PDF] Rendered page ${pageIndex + 1}`);
+
+    if (token !== renderToken) return;
 
     wrapper.appendChild(canvas);
+    console.log(`[PDF] Appended canvas ${canvas.width}x${canvas.height} to wrapper ${wrapper.clientWidth}x${wrapper.clientHeight}`);
 
-    // Text layer (overlay for selection and double-click sync)
+    // TEMP: Skip TextLayer to isolate whether canvas itself is visible.
+    // If removing this makes text appear, the issue is with TextLayer CSS/overlay.
+    /*
     const textLayerDiv = document.createElement("div");
     textLayerDiv.className = "textLayer";
     textLayerDiv.style.cssText = "position:absolute;inset:0;";
+    wrapper.style.setProperty("--scale-factor", String(s));
 
     const textLayer = new TextLayer({
       textContentSource: page.streamTextContent(),
@@ -117,10 +141,8 @@ async function renderPages(pdf: PDFDocumentProxy, s: number, token: number): Pro
       viewport: displayViewport,
     });
     await textLayer.render();
+    if (token !== renderToken) return;
 
-    // Single click → jump editor cursor to source location
-    // Drag and double-click are left to the browser for text selection
-    const pageIndex = pageNum - 1;
     const userScale = s;
     let mouseDownX = 0;
     let mouseDownY = 0;
@@ -129,47 +151,153 @@ async function renderPages(pdf: PDFDocumentProxy, s: number, token: number): Pro
       mouseDownY = e.clientY;
     });
     textLayerDiv.addEventListener("click", (e) => {
-      if (e.detail !== 1) return; // ignore double-click
+      if (e.detail !== 1) return;
       const dx = e.clientX - mouseDownX;
       const dy = e.clientY - mouseDownY;
-      if (dx * dx + dy * dy > 16) return; // ignore drag (>4px)
+      if (dx * dx + dy * dy > 16) return;
       handleTextLayerClick(e, pageIndex, userScale);
     });
 
     wrapper.appendChild(textLayerDiv);
-    fragment.appendChild(wrapper);
-  }
+    */
 
-  if (token !== renderToken) return;
-  pagesContainer.value.innerHTML = "";
-  pagesContainer.value.appendChild(fragment);
+    renderedPages.add(pageIndex);
+  } catch (err) {
+    console.error(`Failed to render page ${pageIndex}:`, err);
+  } finally {
+    renderingPages.delete(pageIndex);
+  }
 }
 
-async function loadPdf(pdfBase64: string): Promise<void> {
+function clearAllRendered(): void {
+  for (const wrapper of pageWrappers) {
+    if (wrapper) wrapper.innerHTML = "";
+  }
+  renderedPages.clear();
+  renderingPages.clear();
+}
+
+async function loadPdf(pdfPath: string): Promise<void> {
   const token = ++renderToken;
+
+  // Disconnect old observer but keep content visible until the new one is ready
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
 
   const prev = currentPdf;
   currentPdf = null;
   prev?.destroy();
 
-  const binary = atob(pdfBase64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-
-  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-  if (token !== renderToken) {
-    pdf.destroy();
-    return;
+  if (currentBlobUrl) {
+    URL.revokeObjectURL(currentBlobUrl);
+    currentBlobUrl = null;
   }
 
-  currentPdf = pdf;
-  await renderPages(pdf, scale.value, token);
+  if (!pagesContainer.value) return;
+
+  const container = pagesContainer.value;
+  const oldScrollTop = container.scrollTop;
+
+  try {
+    const bytes = await readFile(pdfPath);
+    console.log(`[PDF] readFile returned ${bytes.length} bytes from ${pdfPath}`);
+
+    // Use a Blob URL instead of passing raw bytes directly;
+    // some WebKit builds on WSLg handle {url} better than {data}.
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const blobUrl = URL.createObjectURL(blob);
+    currentBlobUrl = blobUrl;
+
+    const pdf = await pdfjsLib.getDocument({ url: blobUrl }).promise;
+    if (token !== renderToken) {
+      pdf.destroy();
+      return;
+    }
+
+    currentPdf = pdf;
+
+    // Preload all page objects to determine exact wrapper dimensions
+    const pages: PDFPageProxy[] = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      pages.push(await pdf.getPage(i));
+      if (token !== renderToken) return;
+    }
+
+    pageObjects = pages;
+
+    const fragment = document.createDocumentFragment();
+    const wrappers: (HTMLElement | null)[] = [];
+
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      const viewport = page.getViewport({ scale: scale.value });
+
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = [
+        "position: relative",
+        `width: ${viewport.width}px`,
+        `height: ${viewport.height}px`,
+        "margin: 8px auto",
+        "box-shadow: 0 2px 8px rgba(0,0,0,0.3)",
+        "overflow: hidden",
+        "background: #fff",
+      ].join(";");
+      wrapper.dataset.pageIndex = String(i);
+
+      fragment.appendChild(wrapper);
+      wrappers.push(wrapper);
+    }
+
+    // Update state so renderPage can find the new wrappers
+    pageWrappers = wrappers;
+    renderedPages.clear();
+    renderingPages.clear();
+
+    // Pre-render the pages that will be visible after swap (based on old scroll)
+    const pageHeightPx = pages[0]?.getViewport({ scale: scale.value }).height ?? 800;
+    const margin = 16;
+    const startPage = Math.max(0, Math.floor(oldScrollTop / (pageHeightPx + margin)));
+    const visibleCount = Math.ceil(container.clientHeight / (pageHeightPx + margin)) + 1;
+    const endPage = Math.min(pages.length, startPage + visibleCount + 1);
+
+    for (let i = startPage; i < endPage; i++) {
+      await renderPage(i, token);
+      if (token !== renderToken) return;
+    }
+
+    // Atomically swap old content for new – this avoids the blank flash
+    container.innerHTML = "";
+    container.appendChild(fragment);
+    container.scrollTop = oldScrollTop;
+
+    observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const idx = Number((entry.target as HTMLElement).dataset.pageIndex);
+            if (!Number.isNaN(idx) && !renderedPages.has(idx)) {
+              renderPage(idx, renderToken);
+            }
+          }
+        }
+      },
+      { root: container, rootMargin: "200px" }
+    );
+
+    for (const wrapper of wrappers) {
+      if (wrapper) observer.observe(wrapper);
+    }
+  } catch (err) {
+    console.error("Failed to load PDF:", err);
+  }
 }
 
 watch(
-  () => previewStore.pdf,
-  (pdf) => {
-    if (pdf) loadPdf(pdf);
+  () => previewStore.compileCount,
+  () => {
+    if (previewStore.pdfPath) loadPdf(previewStore.pdfPath);
   },
   { immediate: true }
 );
@@ -179,8 +307,36 @@ watch(scale, (s) => {
   if (zoomTimer) clearTimeout(zoomTimer);
   const token = ++renderToken;
   zoomTimer = setTimeout(() => {
-    if (currentPdf) renderPages(currentPdf, s, token);
-  }, 80);
+    if (!currentPdf) return;
+
+    // Update wrapper sizes and clear rendered content
+    for (let i = 0; i < pageObjects.length; i++) {
+      const page = pageObjects[i];
+      const wrapper = pageWrappers[i];
+      if (!page || !wrapper) continue;
+      const viewport = page.getViewport({ scale: s });
+      wrapper.style.width = `${viewport.width}px`;
+      wrapper.style.height = `${viewport.height}px`;
+      wrapper.innerHTML = "";
+    }
+
+    renderedPages.clear();
+    renderingPages.clear();
+
+    // Manually trigger render for pages currently visible in the viewport
+    const container = pagesContainer.value;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+
+    for (let i = 0; i < pageWrappers.length; i++) {
+      const wrapper = pageWrappers[i];
+      if (!wrapper) continue;
+      const rect = wrapper.getBoundingClientRect();
+      if (rect.bottom >= containerRect.top - 200 && rect.top <= containerRect.bottom + 200) {
+        renderPage(i, token);
+      }
+    }
+  }, 150);
 });
 </script>
 
@@ -220,7 +376,7 @@ watch(scale, (s) => {
 
     <!-- Empty state -->
     <div
-      v-if="!previewStore.pdf && previewStore.status !== 'compiling'"
+      v-if="!previewStore.pdfPath && previewStore.status !== 'compiling'"
       class="pdf-empty"
     >
       <div class="pdf-empty__top" />

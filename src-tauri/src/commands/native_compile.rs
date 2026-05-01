@@ -1,7 +1,7 @@
-use base64::Engine as _;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tauri::Emitter;
+use tokio::sync::Mutex as AsyncMutex;
 use typst::World;
 
 const TYPST_VERSION: &str = "0.14.2";
@@ -18,16 +18,19 @@ struct TextPos {
 }
 
 pub struct NativeCompilerState {
-    pub world: Arc<Mutex<ZenypstWorld>>,
-    /// Glyph positions extracted after each successful compilation.
-    positions: Arc<Mutex<Vec<TextPos>>>,
+    pub world: Arc<AsyncMutex<ZenypstWorld>>,
+    /// The last successfully compiled document, kept for lazy position building.
+    last_doc: Arc<AsyncMutex<Option<typst::layout::PagedDocument>>>,
+    /// Glyph positions extracted on first use after each successful compilation.
+    positions: Arc<AsyncMutex<Vec<TextPos>>>,
 }
 
 impl NativeCompilerState {
     pub fn new() -> Self {
         Self {
-            world: Arc::new(Mutex::new(ZenypstWorld::new())),
-            positions: Arc::new(Mutex::new(Vec::new())),
+            world: Arc::new(AsyncMutex::new(ZenypstWorld::new())),
+            last_doc: Arc::new(AsyncMutex::new(None)),
+            positions: Arc::new(AsyncMutex::new(Vec::new())),
         }
     }
 }
@@ -50,7 +53,7 @@ pub struct NativeCompileError {
 #[serde(rename_all = "camelCase")]
 pub struct NativeRenderResult {
     pub success: bool,
-    pub pdf: Option<String>, // base64-encoded PDF
+    pub pdf_path: Option<String>, // absolute path to the generated PDF
     pub errors: Vec<NativeCompileError>,
     pub warnings: Vec<NativeCompileError>,
 }
@@ -203,6 +206,11 @@ fn build_positions(
     positions
 }
 
+/// Path where the preview PDF is written so the frontend can load it directly.
+fn preview_pdf_path() -> std::path::PathBuf {
+    std::env::temp_dir().join("zenypst_preview.pdf")
+}
+
 /// Compile content, returning (pdf_bytes_or_errors, warnings, optional_doc).
 fn compile_to_pdf(
     world: &mut ZenypstWorld,
@@ -260,7 +268,7 @@ pub fn get_typst_version() -> String {
     format!("typst {} (built-in)", TYPST_VERSION)
 }
 
-/// Compile typst source in-process and emit the resulting PDF via event.
+/// Compile typst source in-process and emit the resulting PDF path via event.
 #[tauri::command]
 pub async fn compile_native(
     content: String,
@@ -269,41 +277,59 @@ pub async fn compile_native(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     let world = Arc::clone(&state.world);
+    let last_doc_store = Arc::clone(&state.last_doc);
     let positions_store = Arc::clone(&state.positions);
 
-    tokio::task::spawn_blocking(move || {
-        let root_path = root.map(std::path::PathBuf::from);
-        let mut guard = world.lock().unwrap();
+    let root_path = root.map(std::path::PathBuf::from);
 
-        let (result, warnings) = compile_to_pdf(&mut guard, content, root_path);
+    let (result, warnings) = {
+        let mut guard = world.lock().await;
+        compile_to_pdf(&mut guard, content, root_path)
+    };
 
-        match result {
-            Err(errors) => {
-                let _ = app_handle.emit(
-                    "typst-native-result",
-                    NativeRenderResult { success: false, pdf: None, errors, warnings },
-                );
-            }
-            Ok((bytes, doc)) => {
-                // Build and store glyph position map for locate_source
-                let new_positions = build_positions(&doc, &*guard);
-                *positions_store.lock().unwrap() = new_positions;
-
-                let pdf_b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-                let _ = app_handle.emit(
-                    "typst-native-result",
-                    NativeRenderResult {
-                        success: true,
-                        pdf: Some(pdf_b64),
-                        errors: vec![],
-                        warnings,
-                    },
-                );
-            }
+    match result {
+        Err(errors) => {
+            let _ = app_handle.emit(
+                "typst-native-result",
+                NativeRenderResult { success: false, pdf_path: None, errors, warnings },
+            );
         }
-    })
-    .await
-    .map_err(|e| e.to_string())?;
+        Ok((bytes, doc)) => {
+            *last_doc_store.lock().await = Some(doc);
+            *positions_store.lock().await = Vec::new();
+
+            // Build glyph positions in the background so the first locate_source call is instant.
+            let world_bg = Arc::clone(&world);
+            let last_doc_bg = Arc::clone(&last_doc_store);
+            let positions_bg = Arc::clone(&positions_store);
+            tokio::spawn(async move {
+                let guard = world_bg.lock().await;
+                let doc_guard = last_doc_bg.lock().await;
+                if let Some(doc) = doc_guard.as_ref() {
+                    let pos = build_positions(doc, &*guard);
+                    *positions_bg.lock().await = pos;
+                }
+            });
+
+            let preview_path = preview_pdf_path();
+            println!("[NativeCompile] Writing preview PDF: {} ({} bytes)", preview_path.display(), bytes.len());
+            tokio::fs::write(&preview_path, &bytes)
+                .await
+                .map_err(|e| format!("Failed to write preview PDF: {}", e))?;
+            println!("[NativeCompile] Preview PDF written successfully");
+
+            let path_str = preview_path.to_string_lossy().to_string();
+            let _ = app_handle.emit(
+                "typst-native-result",
+                NativeRenderResult {
+                    success: true,
+                    pdf_path: Some(path_str),
+                    errors: vec![],
+                    warnings,
+                },
+            );
+        }
+    }
 
     Ok(())
 }
@@ -318,27 +344,27 @@ pub async fn export_pdf(
 ) -> Result<PdfExportResult, String> {
     let world = Arc::clone(&state.world);
 
-    tokio::task::spawn_blocking(move || {
-        let root_path = root.map(std::path::PathBuf::from);
-        let mut guard = world.lock().unwrap();
+    let root_path = root.map(std::path::PathBuf::from);
 
-        let (result, warnings) = compile_to_pdf(&mut guard, content, root_path);
+    let (result, warnings) = {
+        let mut guard = world.lock().await;
+        compile_to_pdf(&mut guard, content, root_path)
+    };
 
-        match result {
-            Err(errors) => Ok(PdfExportResult { success: false, errors, warnings }),
-            Ok((bytes, _doc)) => {
-                std::fs::write(&output_path, &bytes)
-                    .map_err(|e| format!("Failed to write PDF: {}", e))?;
-                Ok(PdfExportResult { success: true, errors: vec![], warnings })
-            }
+    match result {
+        Err(errors) => Ok(PdfExportResult { success: false, errors, warnings }),
+        Ok((bytes, _doc)) => {
+            tokio::fs::write(&output_path, &bytes)
+                .await
+                .map_err(|e| format!("Failed to write PDF: {}", e))?;
+            Ok(PdfExportResult { success: true, errors: vec![], warnings })
         }
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    }
 }
 
 /// Find the source location (line, col) nearest to the given point in the PDF.
 /// Coordinates are in typst pt units with top-left origin.
+/// Builds the glyph position map lazily on first call after a successful compilation.
 #[tauri::command]
 pub async fn locate_source(
     page_index: usize,
@@ -346,7 +372,20 @@ pub async fn locate_source(
     y_pt: f64,
     state: tauri::State<'_, NativeCompilerState>,
 ) -> Result<Option<SourceLocation>, String> {
-    let positions = state.positions.lock().unwrap();
+    let world = Arc::clone(&state.world);
+    let last_doc_store = Arc::clone(&state.last_doc);
+    let positions_store = Arc::clone(&state.positions);
+
+    let mut positions = positions_store.lock().await;
+
+    // Build positions lazily if not yet built for the current document
+    if positions.is_empty() {
+        let guard = world.lock().await;
+        if let Some(doc) = last_doc_store.lock().await.as_ref() {
+            *positions = build_positions(doc, &*guard);
+        }
+    }
+
     let best = positions
         .iter()
         .filter(|p| p.page == page_index)
