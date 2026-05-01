@@ -1,4 +1,7 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Mutex as StdMutex;
+use std::time::SystemTime;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Datetime};
 use typst::syntax::{FileId, Source, VirtualPath};
@@ -16,6 +19,8 @@ pub struct ZenypstWorld {
     source: Source,
     root: Option<PathBuf>, // directory of the open file, for imports
     package_storage: PackageStorage,
+    source_cache: StdMutex<HashMap<FileId, (Source, SystemTime)>>,
+    file_cache: StdMutex<HashMap<FileId, (Bytes, SystemTime)>>,
 }
 
 impl ZenypstWorld {
@@ -64,6 +69,8 @@ impl ZenypstWorld {
             source,
             root: None,
             package_storage,
+            source_cache: StdMutex::new(HashMap::new()),
+            file_cache: StdMutex::new(HashMap::new()),
         }
     }
 
@@ -114,8 +121,26 @@ impl World for ZenypstWorld {
             return Ok(self.source.clone());
         }
         if let Some(path) = self.resolve_path(id) {
+            if let Ok(meta) = std::fs::metadata(&path) {
+                if let Ok(mtime) = meta.modified() {
+                    let cache = self.source_cache.lock().unwrap();
+                    if let Some((cached_src, cached_mtime)) = cache.get(&id) {
+                        if *cached_mtime == mtime {
+                            return Ok(cached_src.clone());
+                        }
+                    }
+                    drop(cache);
+                }
+            }
             if let Ok(text) = std::fs::read_to_string(&path) {
-                return Ok(Source::new(id, text));
+                let src = Source::new(id, text);
+                if let Ok(meta) = std::fs::metadata(&path) {
+                    if let Ok(mtime) = meta.modified() {
+                        let mut cache = self.source_cache.lock().unwrap();
+                        cache.insert(id, (src.clone(), mtime));
+                    }
+                }
+                return Ok(src);
             }
         }
         Err(FileError::NotFound(id.vpath().as_rootless_path().into()))
@@ -123,8 +148,26 @@ impl World for ZenypstWorld {
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
         if let Some(path) = self.resolve_path(id) {
+            if let Ok(meta) = std::fs::metadata(&path) {
+                if let Ok(mtime) = meta.modified() {
+                    let cache = self.file_cache.lock().unwrap();
+                    if let Some((cached_bytes, cached_mtime)) = cache.get(&id) {
+                        if *cached_mtime == mtime {
+                            return Ok(cached_bytes.clone());
+                        }
+                    }
+                    drop(cache);
+                }
+            }
             if let Ok(data) = std::fs::read(&path) {
-                return Ok(Bytes::new(data));
+                let bytes = Bytes::new(data);
+                if let Ok(meta) = std::fs::metadata(&path) {
+                    if let Ok(mtime) = meta.modified() {
+                        let mut cache = self.file_cache.lock().unwrap();
+                        cache.insert(id, (bytes.clone(), mtime));
+                    }
+                }
+                return Ok(bytes);
             }
         }
         Err(FileError::NotFound(id.vpath().as_rootless_path().into()))

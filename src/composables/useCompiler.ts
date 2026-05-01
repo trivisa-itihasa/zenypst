@@ -12,7 +12,7 @@ let nativeListening = false;
 
 interface NativeRenderResult {
   success: boolean;
-  pdf: string | null;
+  pdfPath: string | null;
   errors: CompileError[];
   warnings: CompileError[];
 }
@@ -34,8 +34,8 @@ export function useCompiler() {
     nativeListening = true;
     nativeUnlisten = await listen<NativeRenderResult>("typst-native-result", (event) => {
       const result = event.payload;
-      if (result.success && result.pdf) {
-        previewStore.setSuccess(result.pdf);
+      if (result.success && result.pdfPath) {
+        previewStore.setSuccess(result.pdfPath);
       } else {
         previewStore.setError(result.errors ?? [], result.warnings ?? []);
       }

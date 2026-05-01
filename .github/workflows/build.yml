@@ -73,24 +73,35 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
-      - name: Update release body with platform guide
+      - name: Generate release notes and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.ref_name }}"
-          gh release edit "$TAG" \
-            --repo "${{ github.repository }}" \
-            --notes "$(cat <<'BODY'
+
+          # Generate automatic release notes via GitHub API
+          GENERATED_NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes -f tag_name="$TAG" --jq '.body')
+
+          DOWNLOAD_GUIDE="
           ## Download Guide
 
           | File | Platform | Description |
           |------|----------|-------------|
-          | `Zenypst_*_universal.dmg` | **macOS** (Apple Silicon + Intel) | Disk image installer |
-          | `Zenypst.app.tar.gz` | **macOS** (Apple Silicon + Intel) | App bundle (for Sparkle updater) |
-          | `Zenypst_*_x64-setup.exe` | **Windows** (64-bit) | NSIS installer |
-          | `Zenypst_*_x64_en-US.msi` | **Windows** (64-bit) | MSI installer |
-          | `zenypst_*_amd64.deb` | **Linux** (Debian/Ubuntu, 64-bit) | Debian package |
-          | `zenypst_*_amd64.AppImage` | **Linux** (64-bit) | Portable AppImage |
-          BODY
-          )"
+          | \`Zenypst_*_universal.dmg\` | **macOS** (Apple Silicon + Intel) | Disk image installer |
+          | \`Zenypst.app.tar.gz\` | **macOS** (Apple Silicon + Intel) | App bundle (for Sparkle updater) |
+          | \`Zenypst_*_x64-setup.exe\` | **Windows** (64-bit) | NSIS installer |
+          | \`Zenypst_*_x64_en-US.msi\` | **Windows** (64-bit) | MSI installer |
+          | \`zenypst_*_amd64.deb\` | **Linux** (Debian/Ubuntu, 64-bit) | Debian package |
+          | \`zenypst_*_amd64.AppImage\` | **Linux** (64-bit) | Portable AppImage |
+          "
+
+          FULL_BODY="${GENERATED_NOTES}
+
+          ${DOWNLOAD_GUIDE}"
+
+          # Update release body and publish (remove draft)
+          gh release edit "$TAG" \
+            --repo "${{ github.repository }}" \
+            --notes "$FULL_BODY" \
+            --draft=false
 
