@@ -73,6 +73,33 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
+      - name: Rename release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          mkdir -p ./assets
+
+          ASSETS=$(gh release view "$TAG" --repo "${{ github.repository }}" --json assets --jq '.assets[].name')
+
+          for asset in $ASSETS; do
+            new_name=$(echo "$asset" | sed -E 's/[-_][0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?//g')
+
+            if [ "$asset" != "$new_name" ]; then
+              echo "Renaming $asset -> $new_name"
+
+              gh release download "$TAG" --repo "${{ github.repository }}" --pattern "$asset" --dir ./assets
+              mv "./assets/$asset" "./assets/$new_name"
+
+              gh release upload "$TAG" "./assets/$new_name" --repo "${{ github.repository }}"
+
+              ASSET_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG --jq ".assets[] | select(.name == \"$asset\") | .id")
+              gh api repos/${{ github.repository }}/releases/assets/$ASSET_ID -X DELETE
+            fi
+          done
+
+          rm -rf ./assets
+
       - name: Generate release notes and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -87,12 +114,13 @@ jobs:
 
           | File | Platform | Description |
           |------|----------|-------------|
-          | \`Zenypst_*_universal.dmg\` | **macOS** (Apple Silicon + Intel) | Disk image installer |
+          | \`Zenypst_universal.dmg\` | **macOS** (Apple Silicon + Intel) | Disk image installer |
           | \`Zenypst.app.tar.gz\` | **macOS** (Apple Silicon + Intel) | App bundle (for Sparkle updater) |
-          | \`Zenypst_*_x64-setup.exe\` | **Windows** (64-bit) | NSIS installer |
-          | \`Zenypst_*_x64_en-US.msi\` | **Windows** (64-bit) | MSI installer |
-          | \`zenypst_*_amd64.deb\` | **Linux** (Debian/Ubuntu, 64-bit) | Debian package |
-          | \`zenypst_*_amd64.AppImage\` | **Linux** (64-bit) | Portable AppImage |
+          | \`Zenypst_x64-setup.exe\` | **Windows** (64-bit) | NSIS installer |
+          | \`Zenypst_x64_en-US.msi\` | **Windows** (64-bit) | MSI installer |
+          | \`zenypst_amd64.deb\` | **Linux** (Debian/Ubuntu, 64-bit) | Debian package |
+          | \`zenypst_amd64.AppImage\` | **Linux** (64-bit) | Portable AppImage |
+          | \`Zenypst.x86_64.rpm\` | **Linux** (RHEL/Fedora/openSUSE, 64-bit) | RPM package |
           "
 
           FULL_BODY="${GENERATED_NOTES}
