@@ -1,6 +1,6 @@
 [package]
 name = "zenypst"
-version = "0.2.3"
+version = "0.3.2"
 description = "A Typst desktop editor"
 authors = ["Zenypst"]
 edition = "2021"
