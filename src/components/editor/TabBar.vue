@@ -55,7 +55,7 @@ function getTabIcon(tab: FileTab): string {
       {{ t('tabBar.noFilesOpen') }}
     </div>
 
-    <q-space />
+    <q-space v-if="editorStore.tabs.length > 0" />
 
     <q-btn
       v-if="settingsStore.settings.previewMode === 'manual'"
@@ -141,6 +141,7 @@ function getTabIcon(tab: FileTab): string {
 
 .tab-placeholder {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   padding-left: 12px;

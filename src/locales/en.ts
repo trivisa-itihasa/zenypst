@@ -129,10 +129,17 @@ export default {
   // Settings dialog
   settings: {
     title: "Settings",
+    general: "General",
     editor: "Editor",
     theme: "Theme",
     preview: "Preview",
     typst: "Typst",
+  },
+
+  // General settings
+  generalSettings: {
+    title: "General Settings",
+    showFullPathInTreeHeader: "Show full path in Explorer header",
   },
 
   // Font settings

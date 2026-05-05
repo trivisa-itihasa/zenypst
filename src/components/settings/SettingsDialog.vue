@@ -5,6 +5,7 @@ import FontSettings from "./FontSettings.vue";
 import ThemeEditor from "./ThemeEditor.vue";
 import PreviewSettings from "./PreviewSettings.vue";
 import TypstSettings from "./TypstSettings.vue";
+import GeneralSettings from "./GeneralSettings.vue";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: "update:modelValue", v: boolean): void }>();
@@ -19,6 +20,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { value: "general", icon: "mdi-cog", label: t("settings.general") },
   { value: "editor", icon: "mdi-format-font", label: t("settings.editor") },
   { value: "theme", icon: "mdi-palette", label: t("settings.theme") },
   { value: "preview", icon: "mdi-eye", label: t("settings.preview") },
@@ -60,6 +62,9 @@ const NAV_ITEMS: NavItem[] = [
           </div>
 
           <div class="col q-pl-md">
+            <div v-show="tab === 'general'">
+              <GeneralSettings />
+            </div>
             <div v-show="tab === 'editor'">
               <FontSettings />
             </div>

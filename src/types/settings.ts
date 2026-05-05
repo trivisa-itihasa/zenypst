@@ -25,6 +25,9 @@ export interface AppSettings {
   lastOpenedPath: string | null;
   recentPaths: string[];
 
+  // Explorer
+  showFullPathInTreeHeader: boolean;
+
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -43,6 +46,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   uiFontSize: 13,
   lastOpenedPath: null,
   recentPaths: [],
+  showFullPathInTreeHeader: false,
 };
 
 /** Typst compilation result from the Rust backend. */

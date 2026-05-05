@@ -45,6 +45,10 @@ pub struct AppSettings {
     #[serde(default)]
     pub recent_paths: Vec<String>,
 
+    // Explorer
+    #[serde(default)]
+    pub show_full_path_in_tree_header: bool,
+
     // Typst
     #[serde(default)]
     pub typst_path: String,
@@ -79,6 +83,7 @@ impl Default for AppSettings {
             ui_font_size: default_ui_font_size(),
             last_opened_path: None,
             recent_paths: vec![],
+            show_full_path_in_tree_header: false,
             typst_path: String::new(),
         }
     }
@@ -273,7 +278,7 @@ fn built_in_themes() -> Vec<Theme> {
                 ui_text: "#4c4f69".to_string(),
                 ui_text_muted: "rgba(76, 79, 105, 0.6)".to_string(),
                 primary: "#616161".to_string(),
-                status_bar: "#1e66f5".to_string(),
+                status_bar: "#239dad".to_string(),
                 status_bar_text: "#ffffff".to_string(),
                 error: "#d20f39".to_string(),
                 warning: "#fe640b".to_string(),
@@ -299,47 +304,6 @@ fn built_in_themes() -> Vec<Theme> {
                 raw_block: "#6c6f85".to_string(),
                 operator: "#04a5e5".to_string(),
                 bracket: "#7287fd".to_string(),
-            },
-        },
-        Theme {
-            id: "solarized-dark".to_string(),
-            name: "Solarized Dark".to_string(),
-            built_in: true,
-            is_dark: true,
-            colors: ThemeColors {
-                app_background: "#002b36".to_string(),
-                surface: "#073642".to_string(),
-                surface_variant: "#0d4a5b".to_string(),
-                border: "rgba(131, 148, 150, 0.18)".to_string(),
-                ui_text: "#93a1a1".to_string(),
-                ui_text_muted: "rgba(147, 161, 161, 0.6)".to_string(),
-                primary: "#268bd2".to_string(),
-                status_bar: "#073642".to_string(),
-                status_bar_text: "#93a1a1".to_string(),
-                error: "#dc322f".to_string(),
-                warning: "#cb4b16".to_string(),
-                info: "#268bd2".to_string(),
-                success: "#859900".to_string(),
-                background: "#002b36".to_string(),
-                foreground: "#839496".to_string(),
-                caret: "#839496".to_string(),
-                selection: "#073642".to_string(),
-                line_highlight: "#073642".to_string(),
-                gutter_background: "#002b36".to_string(),
-                gutter_foreground: "#586e75".to_string(),
-                heading: "#268bd2".to_string(),
-                emphasis: "#6c71c4".to_string(),
-                strong: "#cb4b16".to_string(),
-                keyword: "#859900".to_string(),
-                function: "#268bd2".to_string(),
-                string: "#2aa198".to_string(),
-                number: "#d33682".to_string(),
-                comment: "#586e75".to_string(),
-                math: "#b58900".to_string(),
-                label: "#2aa198".to_string(),
-                raw_block: "#657b83".to_string(),
-                operator: "#2aa198".to_string(),
-                bracket: "#657b83".to_string(),
             },
         },
     ]
