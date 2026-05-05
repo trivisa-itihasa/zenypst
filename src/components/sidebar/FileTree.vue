@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useFileTreeStore } from "@/stores/fileTree";
+import { useSettingsStore } from "@/stores/settings";
 import { useFileOps } from "@/composables/useFileOps";
 import { ensureTypExtension } from "@/utils/path";
 import FileTreeItem from "./FileTreeItem.vue";
@@ -11,7 +12,16 @@ const { t } = useI18n();
 const emit = defineEmits<{ (e: "open-file", path: string): void }>();
 
 const fileTreeStore = useFileTreeStore();
+const settingsStore = useSettingsStore();
 const fileOps = useFileOps();
+
+const headerLabel = computed(() => {
+  if (!fileTreeStore.rootPath) return t("fileTree.explorer");
+  if (settingsStore.settings.showFullPathInTreeHeader) {
+    return fileTreeStore.rootPath;
+  }
+  return getRootName(fileTreeStore.rootPath);
+});
 
 const newFileDialog = ref(false);
 const newFileValue = ref("");
@@ -68,26 +78,28 @@ async function confirmNewFolder(): Promise<void> {
   <div class="file-tree">
     <!-- Header -->
     <div class="file-tree-header d-flex align-center px-3">
-      <span class="text-caption text-uppercase font-weight-medium tracking-widest flex-grow-1 root-name-label">
-        <template v-if="fileTreeStore.rootPath">
-          {{ getRootName(fileTreeStore.rootPath) }}
-        </template>
-        <template v-else>{{ t('fileTree.explorer') }}</template>
-      </span>
-      <button class="header-btn" :title="t('fileTree.refresh')" @click="refreshTree">
-        <q-icon name="mdi-refresh" class="header-btn-icon" />
-      </button>
-      <button
-        v-if="fileTreeStore.rootPath"
-        class="header-btn"
-        :title="t('fileTree.closeFolder')"
-        @click="fileTreeStore.clearTree()"
+      <span
+        class="text-caption text-uppercase font-weight-medium tracking-widest flex-grow-1 root-name-label"
+        :title="fileTreeStore.rootPath ?? undefined"
       >
-        <q-icon name="mdi-folder-remove-outline" class="header-btn-icon" />
-      </button>
-      <button class="header-btn" :title="t('fileTree.openFolder')" @click="openFolder">
-        <q-icon name="mdi-folder-open-outline" class="header-btn-icon" />
-      </button>
+        {{ headerLabel }}
+      </span>
+      <div class="header-actions">
+        <button class="header-btn" :title="t('fileTree.refresh')" @click="refreshTree">
+          <q-icon name="mdi-refresh" class="header-btn-icon" />
+        </button>
+        <button
+          v-if="fileTreeStore.rootPath"
+          class="header-btn"
+          :title="t('fileTree.closeFolder')"
+          @click="fileTreeStore.clearTree()"
+        >
+          <q-icon name="mdi-folder-remove-outline" class="header-btn-icon" />
+        </button>
+        <button class="header-btn" :title="t('fileTree.openFolder')" @click="openFolder">
+          <q-icon name="mdi-folder-open-outline" class="header-btn-icon" />
+        </button>
+      </div>
     </div>
 
     <!-- Tree content — right-click on empty space triggers root context menu -->
@@ -217,6 +229,14 @@ async function confirmNewFolder(): Promise<void> {
   position: relative;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-right: -8px;
+}
+
 .header-btn {
   border-radius: 4px;
   min-width: 0;
@@ -231,6 +251,7 @@ async function confirmNewFolder(): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .header-btn:hover {
