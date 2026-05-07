@@ -73,30 +73,48 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
-      - name: Rename release assets
+      - name: Update latest.json URLs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.ref_name }}"
           mkdir -p ./assets
 
-          ASSETS=$(gh release view "$TAG" --repo "${{ github.repository }}" --json assets --jq '.assets[].name')
+          # Download current latest.json
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "latest.json" --dir ./assets
 
-          for asset in $ASSETS; do
-            new_name=$(echo "$asset" | sed -E 's/[-_][0-9]+\.[0-9]+\.[0-9]+(-[0-9]+)?//g')
+          # Update URLs to match actual asset names (remove version numbers from filenames in URLs)
+          python3 << 'EOF'
+          import json
+          import re
+          from urllib.parse import urlparse, urlunparse
 
-            if [ "$asset" != "$new_name" ]; then
-              echo "Renaming $asset -> $new_name"
+          with open('./assets/latest.json', 'r') as f:
+              data = json.load(f)
 
-              gh release download "$TAG" --repo "${{ github.repository }}" --pattern "$asset" --dir ./assets
-              mv "./assets/$asset" "./assets/$new_name"
+          for platform, info in data.get('platforms', {}).items():
+              url = info.get('url', '')
+              parsed = urlparse(url)
+              path = parsed.path
+              filename = path.split('/')[-1]
 
-              gh release upload "$TAG" "./assets/$new_name" --repo "${{ github.repository }}"
+              # Remove version patterns from filename only
+              # Pattern: _X.Y.Z or _X.Y.Z_N (e.g., Zenypst_0.3.3_amd64.AppImage -> Zenypst_amd64.AppImage)
+              new_filename = re.sub(r'_[0-9]+\.[0-9]+\.[0-9]+(_[0-9]+)?', '', filename)
+              # Pattern: -X.Y.Z-N (for RPM, e.g., Zenypst-0.3.3-1.x86_64.rpm -> Zenypst.x86_64.rpm)
+              new_filename = re.sub(r'-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+', '', new_filename)
 
-              ASSET_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG --jq ".assets[] | select(.name == \"$asset\") | .id")
-              gh api repos/${{ github.repository }}/releases/assets/$ASSET_ID -X DELETE
-            fi
-          done
+              # Reconstruct path
+              new_path = '/'.join(path.split('/')[:-1] + [new_filename])
+              parsed = parsed._replace(path=new_path)
+              info['url'] = urlunparse(parsed)
+
+          with open('./assets/latest.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          EOF
+
+          # Re-upload latest.json
+          gh release upload "$TAG" "./assets/latest.json" --repo "${{ github.repository }}" --clobber
 
           rm -rf ./assets
 
@@ -114,13 +132,13 @@ jobs:
 
           | File | Platform | Description |
           |------|----------|-------------|
-          | \`Zenypst_universal.dmg\` | **macOS** (Apple Silicon + Intel) | Disk image installer |
-          | \`Zenypst.app.tar.gz\` | **macOS** (Apple Silicon + Intel) | App bundle (for Sparkle updater) |
-          | \`Zenypst_x64-setup.exe\` | **Windows** (64-bit) | NSIS installer |
-          | \`Zenypst_x64_en-US.msi\` | **Windows** (64-bit) | MSI installer |
-          | \`zenypst_amd64.deb\` | **Linux** (Debian/Ubuntu, 64-bit) | Debian package |
-          | \`zenypst_amd64.AppImage\` | **Linux** (64-bit) | Portable AppImage |
-          | \`Zenypst.x86_64.rpm\` | **Linux** (RHEL/Fedora/openSUSE, 64-bit) | RPM package |
+          | \`Zenypst_${TAG#v}_universal.dmg\` | **macOS** (Apple Silicon + Intel) | Disk image installer |
+          | \`Zenypst_${TAG#v}_universal.app.tar.gz\` | **macOS** (Apple Silicon + Intel) | App bundle (for Sparkle updater) |
+          | \`Zenypst_${TAG#v}_x64-setup.exe\` | **Windows** (64-bit) | NSIS installer |
+          | \`Zenypst_${TAG#v}_x64_en-US.msi\` | **Windows** (64-bit) | MSI installer |
+          | \`zenypst_${TAG#v}_amd64.deb\` | **Linux** (Debian/Ubuntu, 64-bit) | Debian package |
+          | \`zenypst_${TAG#v}_amd64.AppImage\` | **Linux** (64-bit) | Portable AppImage |
+          | \`zenypst-${TAG#v}-1.x86_64.rpm\` | **Linux** (RHEL/Fedora/openSUSE, 64-bit) | RPM package |
           "
 
           FULL_BODY="${GENERATED_NOTES}
