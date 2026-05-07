@@ -63,7 +63,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Zenypst ${{ github.ref_name }}"
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
@@ -127,9 +127,8 @@ jobs:
 
           ${DOWNLOAD_GUIDE}"
 
-          # Update release body and publish (remove draft)
+          # Update release body
           gh release edit "$TAG" \
             --repo "${{ github.repository }}" \
-            --notes "$FULL_BODY" \
-            --draft=false
+            --notes "$FULL_BODY"
 

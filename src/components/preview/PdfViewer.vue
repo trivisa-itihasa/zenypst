@@ -19,6 +19,7 @@ const previewStore = usePreviewStore();
 const editorStore = useEditorStore();
 const pagesContainer = ref<HTMLElement | null>(null);
 const scale = ref(1.0);
+const smoothScale = ref(1.0);
 
 let currentPdf: PDFDocumentProxy | null = null;
 let currentBlobUrl: string | null = null;
@@ -30,21 +31,64 @@ let pageObjects: PDFPageProxy[] = [];
 let pageWrappers: (HTMLElement | null)[] = [];
 let renderedPages = new Set<number>();
 let renderingPages = new Set<number>();
+let lastGestureScale = 0;
 
-// Ctrl+wheel zoom
+// Ctrl+wheel zoom (supports trackpad pinch on macOS)
 function onWheel(e: WheelEvent): void {
-  if (!e.ctrlKey) return;
+  if (!e.ctrlKey && !e.metaKey) return;
   e.preventDefault();
-  const delta = e.deltaY > 0 ? -0.1 : 0.1;
-  scale.value = Math.min(4, Math.max(0.25, Math.round((scale.value + delta) * 10) / 10));
+  const deltaModeScale = e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 80 : 1;
+  const delta = -e.deltaY * 0.002 * deltaModeScale;
+  smoothScale.value = Math.min(4, Math.max(0.25, smoothScale.value + delta));
+}
+
+// Safari trackpad pinch gestures
+function onGestureStart(_e: Event): void {
+  lastGestureScale = smoothScale.value;
+}
+
+function onGestureChange(e: Event): void {
+  const ge = e as any;
+  const newScale = Math.min(4, Math.max(0.25, lastGestureScale * (ge.scale || 1)));
+  if (Math.abs(newScale - smoothScale.value) > 0.001) {
+    e.preventDefault();
+    smoothScale.value = newScale;
+  }
+}
+
+function onGestureEnd(_e: Event): void {
+  lastGestureScale = 0;
+}
+
+function zoomIn(): void {
+  const currentPercent = Math.round(smoothScale.value * 100);
+  const nextPercent = Math.ceil(currentPercent / 10) * 10 + 10;
+  smoothScale.value = Math.min(400, nextPercent) / 100;
+}
+
+function zoomOut(): void {
+  const currentPercent = Math.round(smoothScale.value * 100);
+  const nextPercent = Math.floor(currentPercent / 10) * 10 - 10;
+  smoothScale.value = Math.max(25, nextPercent) / 100;
 }
 
 onMounted(() => {
-  pagesContainer.value?.addEventListener("wheel", onWheel, { passive: false });
+  const el = pagesContainer.value;
+  if (!el) return;
+  el.addEventListener("wheel", onWheel, { passive: false });
+  el.addEventListener("gesturestart", onGestureStart, { passive: false });
+  el.addEventListener("gesturechange", onGestureChange, { passive: false });
+  el.addEventListener("gestureend", onGestureEnd, { passive: false });
 });
 
 onUnmounted(() => {
-  pagesContainer.value?.removeEventListener("wheel", onWheel);
+  const el = pagesContainer.value;
+  if (el) {
+    el.removeEventListener("wheel", onWheel);
+    el.removeEventListener("gesturestart", onGestureStart);
+    el.removeEventListener("gesturechange", onGestureChange);
+    el.removeEventListener("gestureend", onGestureEnd);
+  }
   observer?.disconnect();
   currentPdf?.destroy();
   currentPdf = null;
@@ -59,12 +103,23 @@ interface SourceLocation {
   col: number;
 }
 
-async function handleTextLayerClick(e: MouseEvent, pageIndex: number, userScale: number): Promise<void> {
-  const target = e.currentTarget as HTMLElement;
-  const rect = target.getBoundingClientRect();
-  // Convert CSS pixel offset to typst pt (1 CSS px = 1/userScale pt)
-  const xPt = (e.clientX - rect.left) / userScale;
-  const yPt = (e.clientY - rect.top) / userScale;
+async function handleTextLayerClick(e: MouseEvent, pageIndex: number): Promise<void> {
+  const wrapper = pageWrappers[pageIndex];
+  if (!wrapper) return;
+
+  const page = pageObjects[pageIndex];
+  if (!page) return;
+
+  const rect = wrapper.getBoundingClientRect();
+  const relX = e.clientX - rect.left;
+  const relY = e.clientY - rect.top;
+
+  const viewport = page.getViewport({ scale: 1.0 });
+
+  // Linearly map wrapper CSS pixels to PDF points.
+  // Both CSS and Typst use top-left origin with Y down, so no flip is needed.
+  const xPt = (relX / rect.width) * viewport.width;
+  const yPt = (relY / rect.height) * viewport.height;
 
   try {
     const loc = await invoke<SourceLocation | null>("locate_source", {
@@ -127,9 +182,6 @@ async function renderPage(pageIndex: number, token: number): Promise<void> {
     wrapper.appendChild(canvas);
     console.log(`[PDF] Appended canvas ${canvas.width}x${canvas.height} to wrapper ${wrapper.clientWidth}x${wrapper.clientHeight}`);
 
-    // TEMP: Skip TextLayer to isolate whether canvas itself is visible.
-    // If removing this makes text appear, the issue is with TextLayer CSS/overlay.
-    /*
     const textLayerDiv = document.createElement("div");
     textLayerDiv.className = "textLayer";
     textLayerDiv.style.cssText = "position:absolute;inset:0;";
@@ -143,7 +195,6 @@ async function renderPage(pageIndex: number, token: number): Promise<void> {
     await textLayer.render();
     if (token !== renderToken) return;
 
-    const userScale = s;
     let mouseDownX = 0;
     let mouseDownY = 0;
     textLayerDiv.addEventListener("mousedown", (e) => {
@@ -155,11 +206,10 @@ async function renderPage(pageIndex: number, token: number): Promise<void> {
       const dx = e.clientX - mouseDownX;
       const dy = e.clientY - mouseDownY;
       if (dx * dx + dy * dy > 16) return;
-      handleTextLayerClick(e, pageIndex, userScale);
+      handleTextLayerClick(e, pageIndex);
     });
 
     wrapper.appendChild(textLayerDiv);
-    */
 
     renderedPages.add(pageIndex);
   } catch (err) {
@@ -232,7 +282,7 @@ async function loadPdf(pdfPath: string): Promise<void> {
 
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
-      const viewport = page.getViewport({ scale: scale.value });
+      const viewport = page.getViewport({ scale: smoothScale.value });
 
       const wrapper = document.createElement("div");
       wrapper.style.cssText = [
@@ -256,7 +306,7 @@ async function loadPdf(pdfPath: string): Promise<void> {
     renderingPages.clear();
 
     // Pre-render the pages that will be visible after swap (based on old scroll)
-    const pageHeightPx = pages[0]?.getViewport({ scale: scale.value }).height ?? 800;
+    const pageHeightPx = pages[0]?.getViewport({ scale: smoothScale.value }).height ?? 800;
     const margin = 16;
     const startPage = Math.max(0, Math.floor(oldScrollTop / (pageHeightPx + margin)));
     const visibleCount = Math.ceil(container.clientHeight / (pageHeightPx + margin)) + 1;
@@ -302,22 +352,35 @@ watch(
   { immediate: true }
 );
 
-watch(scale, (s) => {
+watch(smoothScale, (s) => {
   if (!currentPdf) return;
   if (zoomTimer) clearTimeout(zoomTimer);
+
+  const container = pagesContainer.value;
+  container?.classList.add("zooming");
+
+  // Immediately update wrapper sizes for responsive visual feedback.
+  // The old canvas stays in place and stretches, so it looks blurry
+  // but updates instantly; we re-render at full quality after the debounce.
+  for (let i = 0; i < pageObjects.length; i++) {
+    const page = pageObjects[i];
+    const wrapper = pageWrappers[i];
+    if (!page || !wrapper) continue;
+    const viewport = page.getViewport({ scale: s });
+    wrapper.style.width = `${viewport.width}px`;
+    wrapper.style.height = `${viewport.height}px`;
+  }
+
   const token = ++renderToken;
   zoomTimer = setTimeout(() => {
     if (!currentPdf) return;
 
-    // Update wrapper sizes and clear rendered content
-    for (let i = 0; i < pageObjects.length; i++) {
-      const page = pageObjects[i];
+    scale.value = s;
+
+    // Clear rendered content and trigger high-quality re-render
+    for (let i = 0; i < pageWrappers.length; i++) {
       const wrapper = pageWrappers[i];
-      if (!page || !wrapper) continue;
-      const viewport = page.getViewport({ scale: s });
-      wrapper.style.width = `${viewport.width}px`;
-      wrapper.style.height = `${viewport.height}px`;
-      wrapper.innerHTML = "";
+      if (wrapper) wrapper.innerHTML = "";
     }
 
     renderedPages.clear();
@@ -326,6 +389,7 @@ watch(scale, (s) => {
     // Manually trigger render for pages currently visible in the viewport
     const container = pagesContainer.value;
     if (!container) return;
+    container.classList.remove("zooming");
     const containerRect = container.getBoundingClientRect();
 
     for (let i = 0; i < pageWrappers.length; i++) {
@@ -350,16 +414,16 @@ watch(scale, (s) => {
         round
         size="xs"
         icon="mdi-magnify-minus-outline"
-        @click="scale = Math.max(0.25, Math.round((scale - 0.25) * 10) / 10)"
+        @click="zoomOut"
       />
-      <span class="text-caption mx-2">{{ Math.round(scale * 100) }}%</span>
+      <span class="text-caption mx-2">{{ Math.round(smoothScale * 100) }}%</span>
       <q-btn
         dense
         flat
         round
         size="xs"
         icon="mdi-magnify-plus-outline"
-        @click="scale = Math.min(4, Math.round((scale + 0.25) * 10) / 10)"
+        @click="zoomIn"
       />
       <q-space />
       <q-spinner
@@ -429,6 +493,12 @@ watch(scale, (s) => {
 
 .pdf-pages--hidden {
   display: none;
+}
+
+/* Disable text-layer interaction while zooming so the user doesn't click
+   misaligned text while the canvas is temporarily blurry/stretched. */
+.pdf-pages.zooming .textLayer {
+  pointer-events: none !important;
 }
 
 .pdf-empty {

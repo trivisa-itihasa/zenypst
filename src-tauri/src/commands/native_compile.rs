@@ -175,13 +175,17 @@ fn collect_positions(
         match item {
             FrameItem::Text(text) => {
                 let size_pt = text.size.to_pt();
+                // Shift Y from the baseline toward the visual centre of the glyph so
+                // that clicking anywhere on the glyph body (not just the baseline)
+                // matches correctly.
+                let cy = ay + size_pt * 0.35;
                 let mut cursor_x = ax;
                 for glyph in &text.glyphs {
                     let advance_pt = glyph.x_advance.get() * size_pt;
                     let x_offset_pt = glyph.x_offset.get() * size_pt;
                     let cx = cursor_x + x_offset_pt + advance_pt * 0.5;
                     if let Some((line, col)) = resolve_glyph(glyph.span.0, glyph.span.1, world) {
-                        out.push(TextPos { page, x_pt: cx, y_pt: ay, line, col });
+                        out.push(TextPos { page, x_pt: cx, y_pt: cy, line, col });
                     }
                     cursor_x += advance_pt;
                 }
@@ -386,6 +390,10 @@ pub async fn locate_source(
         }
     }
 
+    // Find the nearest glyph using both X and Y distance, but return only
+    // the line number with column fixed to 1. This keeps the accuracy of
+    // glyph-level matching (so normal text and #quote blocks don't interfere
+    // with each other) while avoiding column drift issues with CJK fonts.
     let best = positions
         .iter()
         .filter(|p| p.page == page_index)
@@ -394,5 +402,8 @@ pub async fn locate_source(
             let db = (b.x_pt - x_pt).powi(2) + (b.y_pt - y_pt).powi(2);
             da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
         });
-    Ok(best.map(|p| SourceLocation { line: p.line, col: p.col }))
+
+    // Jump to the start of the matched line so column accuracy
+    // (which is unreliable for CJK) doesn't matter.
+    Ok(best.map(|p| SourceLocation { line: p.line, col: 1 }))
 }

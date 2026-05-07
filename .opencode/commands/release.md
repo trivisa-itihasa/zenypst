@@ -94,7 +94,7 @@ git tag -l "$1"
 10. **完了報告**:
     - リリースタグ名
     - 「タグ push をトリガに GitHub Actions のビルドが起動した。`https://github.com/trivisa-itihasa/zenypst/actions` で進捗を確認できる」
-    - 「ビルド完了後、GitHub が自動生成したリリースノートを含む Release が公開される。`https://github.com/trivisa-itihasa/zenypst/releases` で内容を確認できる」
+    - 「ビルド完了後、GitHub が自動生成したリリースノートを含む Release が自動公開される。`https://github.com/trivisa-itihasa/zenypst/releases` で内容を確認できる」
 
 ## 注意
 
