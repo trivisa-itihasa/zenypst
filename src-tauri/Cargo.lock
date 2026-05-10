@@ -7553,7 +7553,7 @@ dependencies = [
 
 [[package]]
 name = "zenypst"
-version = "0.3.2"
+version = "0.3.4"
 dependencies = [
  "async-recursion",
  "base64 0.22.1",
