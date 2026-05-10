@@ -128,10 +128,7 @@ jobs:
           TAG_CHANGES=$(git tag -l --format='%(contents)' "$TAG" | sed -n '/^Changes:/,$p' | tail -n +2)
 
           if [ -n "$TAG_CHANGES" ]; then
-            CHANGELOG="## Changes
-${TAG_CHANGES}
-
-"
+            CHANGELOG=$(printf '## Changes\n%s\n\n' "$TAG_CHANGES")
           else
             CHANGELOG=""
           fi
