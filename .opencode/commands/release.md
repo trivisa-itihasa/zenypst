@@ -62,36 +62,43 @@ git tag -l "$1"
    git -c include.path=/home/gecko/.gitconfig_local push origin dev
    ```
 
-5. **main に切り替えて最新化**:
+5. **変更点を収集**（dev ブランチで実行）:
+   ```bash
+   git log --oneline --no-merges origin/main..dev | sed 's/^/- /' > /tmp/release_changes.txt
+   ```
+
+6. **main に切り替えて最新化**:
    ```bash
    git checkout main
    git pull origin main
    ```
 
-6. **dev をマージ（履歴保持のため --no-ff）**:
+7. **dev をマージ（履歴保持のため --no-ff）**:
    ```bash
    git merge --no-ff dev -m "Release $1"
    ```
    コンフリクトしたらユーザーに報告して中止（自動解決しない）
 
-7. **タグを作成**:
+8. **タグを作成**（変更点を含む）:
    ```bash
-   git tag -a "$1" -m "Release $1"
+   CHANGES=$(cat /tmp/release_changes.txt)
+   printf 'Release %s\n\nChanges:\n%s\n' "$1" "$CHANGES" > /tmp/tag-msg
+   git tag -a "$1" -F /tmp/tag-msg
    ```
 
-8. **main とタグを同時 push**:
+9. **main とタグを同時 push**:
    ```bash
    git -c include.path=/home/gecko/.gitconfig_local push --follow-tags origin main
    ```
 
-9. **dev を main に同期**（マージコミットを取り込み、次の開発で divergence を起こさない）:
+10. **dev を main に同期**（マージコミットを取り込み、次の開発で divergence を起こさない）:
    ```bash
    git checkout dev
    git merge main
    git -c include.path=/home/gecko/.gitconfig_local push origin dev
    ```
 
-10. **完了報告**:
+11. **完了報告**:
     - リリースタグ名
     - 「タグ push をトリガに GitHub Actions のビルドが起動した。`https://github.com/trivisa-itihasa/zenypst/actions` で進捗を確認できる」
     - 「ビルド完了後、GitHub が自動生成したリリースノートを含む Release が自動公開される。`https://github.com/trivisa-itihasa/zenypst/releases` で内容を確認できる」
