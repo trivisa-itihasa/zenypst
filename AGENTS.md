@@ -37,24 +37,6 @@
 npm run dev       # Vite only (no Tauri IPC, for UI work from browser)
 ```
 
-## Git & GitHub
-
-- Remote: `https://github.com/trivisa-itihasa/zenypst.git`
-- Branch strategy:
-  - `main` — release branch. Always represents the latest released build.
-  - `dev` — development branch. **デフォルトのpush先はここ。** ユーザーから明示的に `main` への push を指示されない限り、コミット・push はすべて `dev` に対して行う。
-- Push 認証: トークンは `~/.gitconfig_local` の URL 書き換えルールで保持。push 時は `-c include.path=...` を付与する。
-- CI: GitHub Actions (`.github/workflows/build.yml`) は `v*` タグの push もしくは `workflow_dispatch` でのみ起動。ビルド完了後、自動生成されたリリースノートを含む Release が自動公開される。通常の `dev`/`main` への push ではビルドは走らない。
-
-### OpenCode スラッシュコマンド
-
-以下のコマンドは `.opencode/commands/` に定義済み。OpenCode セッション内でスラッシュコマンドとして実行できる:
-
-- `/push-dev [commit message]` — 通常開発フロー（dev への commit & push）を一括実行
-- `/release vX.Y.Z` — リリースフロー（バージョン更新 → dev → main マージ → tag push）を一括実行
-
-各コマンドの詳細な手順は `.opencode/commands/` 内のファイルを参照。
-
 ---
 
 ## Non-Obvious Gotchas
