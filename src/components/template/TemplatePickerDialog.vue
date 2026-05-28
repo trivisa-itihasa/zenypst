@@ -58,6 +58,8 @@ function selectUniverse(template: UniverseTemplate): void {
 <template>
   <q-dialog
     :model-value="modelValue"
+    transition-show="none"
+    transition-hide="none"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <q-card class="zen-card" style="width: 600px; max-width: 95vw;">

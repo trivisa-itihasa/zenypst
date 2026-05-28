@@ -92,12 +92,16 @@ html, body, #app {
   outline: none !important;
 }
 
-// Speed up Quasar dialog/menu transitions
+// Disable Quasar dialog/menu transitions entirely on Linux/WebKitGTK
+// to avoid low frame-rate during open/close under software rendering.
+.q-dialog__backdrop {
+  transition: none !important;
+}
 .q-dialog__inner > * {
-  transition-duration: 100ms !important;
+  transition: none !important;
 }
 .q-menu {
-  transition-duration: 80ms !important;
+  transition: none !important;
 }
 .q-notification {
   transition-duration: 80ms !important;

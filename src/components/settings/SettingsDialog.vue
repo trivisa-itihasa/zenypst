@@ -31,6 +31,8 @@ const NAV_ITEMS: NavItem[] = [
 <template>
   <q-dialog
     :model-value="modelValue"
+    transition-show="none"
+    transition-hide="none"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <q-card class="zen-card" style="width: 720px; max-width: 95vw;">
@@ -62,19 +64,19 @@ const NAV_ITEMS: NavItem[] = [
           </div>
 
           <div class="col q-pl-md">
-            <div v-show="tab === 'general'">
+            <div v-if="tab === 'general'">
               <GeneralSettings />
             </div>
-            <div v-show="tab === 'editor'">
+            <div v-if="tab === 'editor'">
               <FontSettings />
             </div>
-            <div v-show="tab === 'theme'">
+            <div v-if="tab === 'theme'">
               <ThemeEditor />
             </div>
-            <div v-show="tab === 'preview'">
+            <div v-if="tab === 'preview'">
               <PreviewSettings />
             </div>
-            <div v-show="tab === 'typst'">
+            <div v-if="tab === 'typst'">
               <TypstSettings />
             </div>
           </div>

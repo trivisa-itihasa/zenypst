@@ -409,7 +409,7 @@ async function togglePreview(): Promise<void> {
       @selected-universe="handleUniverseTemplateSelected"
     />
 
-    <q-dialog v-model="templateManagerDialog">
+    <q-dialog v-model="templateManagerDialog" transition-show="none" transition-hide="none">
       <q-card class="zen-card" style="width: 640px; max-width: 90vw;">
         <q-card-section class="row items-center q-pa-md">
           <div class="text-subtitle-2">{{ t('appShell.templateManager') }}</div>
@@ -424,7 +424,7 @@ async function togglePreview(): Promise<void> {
     </q-dialog>
 
     <!-- Universe template project name dialog -->
-    <q-dialog v-model="projectNameDialog" persistent>
+    <q-dialog v-model="projectNameDialog" persistent transition-show="none" transition-hide="none">
       <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
         <q-card-section>
           <div class="text-subtitle-2">{{ t('appShell.universeProjectNameTitle') }}</div>

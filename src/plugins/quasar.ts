@@ -19,5 +19,13 @@ export const quasarUserOptions = {
       position: "bottom" as const,
       timeout: 4000,
     },
+    dialog: {
+      transitionShow: "none" as const,
+      transitionHide: "none" as const,
+    },
+    menu: {
+      transitionShow: "none" as const,
+      transitionHide: "none" as const,
+    },
   },
 };

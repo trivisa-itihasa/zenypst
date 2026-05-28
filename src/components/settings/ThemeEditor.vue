@@ -178,7 +178,7 @@ async function confirmDelete(id: string): Promise<void> {
     </q-list>
 
     <!-- Theme editor dialog -->
-    <q-dialog v-model="editDialog">
+    <q-dialog v-model="editDialog" transition-show="none" transition-hide="none">
       <q-card class="zen-card" style="width: 560px; max-width: 95vw;">
         <q-card-section>
           <div class="text-subtitle-2">{{ editingTheme.id ? t('themeEditor.editTheme') : t('themeEditor.newTheme') }}</div>
@@ -245,6 +245,8 @@ async function confirmDelete(id: string): Promise<void> {
     <!-- Delete confirm dialog -->
     <q-dialog
       :model-value="!!deleteConfirmId"
+      transition-show="none"
+      transition-hide="none"
       @update:model-value="deleteConfirmId = null"
     >
       <q-card class="zen-card" style="width: 360px; max-width: 90vw;">

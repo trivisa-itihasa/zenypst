@@ -134,7 +134,7 @@ async function handleExportPdf(): Promise<void> {
     </div>
 
     <q-btn flat dense no-caps class="menu-btn" :label="t('toolbar.file')">
-      <q-menu auto-close :offset="[0, 4]">
+      <q-menu auto-close transition-show="none" transition-hide="none" :offset="[0, 4]">
         <q-list dense class="zen-menu-list">
           <q-item clickable @click="handleNewFile">
             <q-item-section avatar><q-icon name="mdi-file-plus" size="16px" /></q-item-section>
@@ -191,7 +191,7 @@ async function handleExportPdf(): Promise<void> {
     </template>
   </div>
 
-  <q-dialog v-model="aboutDialog">
+  <q-dialog v-model="aboutDialog" transition-show="none" transition-hide="none">
     <q-card class="zen-card" style="width: 400px; max-width: 90vw;">
       <q-card-section class="row items-center q-pa-md">
         <img :src="appIconUrl" class="about-icon" alt="" />
