@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 
 import Toolbar from "./Toolbar.vue";
 import ActivityBar from "./ActivityBar.vue";
@@ -66,6 +66,44 @@ const fileTreeVirtualWidth = ref(240);
 const previewVirtualWidth = ref(320);
 
 const bodyRef = ref<HTMLElement | null>(null);
+
+// Ratio of preview width to the available right-side space (editor + preview).
+// Initialized lazily on first resize/mount; updated on right-splitter drag end.
+// Used to maintain the editor:preview proportion when the window is resized.
+const previewRatio = ref(-1);
+let resizeObserver: ResizeObserver | null = null;
+
+function recalcPreviewFromRatio(): void {
+  if (dragging.value === "right") return; // don't interfere with active drag
+
+  const bodyWidth = bodyRef.value?.clientWidth ?? window.innerWidth;
+  const ftw = fileTreeShown.value ? fileTreeDisplayWidth.value : 0;
+  const availableRight = bodyWidth - ftw;
+
+  if (previewRatio.value < 0) {
+    // Initialize ratio from current preview width
+    if (availableRight > 0 && previewWidth.value > 0) {
+      previewRatio.value = previewWidth.value / availableRight;
+    } else {
+      previewRatio.value = 0.3;
+    }
+  }
+
+  if (availableRight <= MIN_EDITOR + MIN_PREVIEW) {
+    // Not enough space — clamp to minimums while respecting editor min
+    const clamped = Math.max(MIN_PREVIEW, availableRight - MIN_EDITOR);
+    previewWidth.value = clamped;
+    if (previewShown.value) previewVirtualWidth.value = clamped;
+    return;
+  }
+
+  const ideal = availableRight * previewRatio.value;
+  const maxPreview = availableRight - MIN_EDITOR;
+  const newWidth = Math.max(MIN_PREVIEW, Math.min(ideal, maxPreview));
+  // Always update previewWidth so it's correct when preview is shown again
+  previewWidth.value = newWidth;
+  if (previewShown.value) previewVirtualWidth.value = newWidth;
+}
 
 const fileTreeShown = computed<boolean>(() => {
   if (dragging.value === "left") {
@@ -135,7 +173,16 @@ function onMouseUp(): void {
     }
   } else if (dragging.value === "right") {
     const nowVisible = previewShown.value;
-    if (nowVisible) previewWidth.value = previewDisplayWidth.value;
+    if (nowVisible) {
+      previewWidth.value = previewDisplayWidth.value;
+      // Compute and save the editor:preview ratio
+      const bodyWidth = bodyRef.value?.clientWidth ?? window.innerWidth;
+      const ftw = fileTreeShown.value ? fileTreeDisplayWidth.value : 0;
+      const availableRight = bodyWidth - ftw;
+      if (availableRight > 0) {
+        previewRatio.value = previewWidth.value / availableRight;
+      }
+    }
     if (nowVisible !== settingsStore.settings.previewVisible) {
       settingsStore.update("previewVisible", nowVisible);
     }
@@ -162,6 +209,7 @@ watch(
 );
 
 onUnmounted(async () => {
+  resizeObserver?.disconnect();
   document.removeEventListener("mousemove", onMouseMove);
   document.removeEventListener("mouseup", onMouseUp);
   document.body.style.cursor = "";
@@ -230,6 +278,17 @@ onMounted(async () => {
       await settingsStore.save();
     }
   }
+
+  // Set up ResizeObserver to maintain editor/preview ratio on window resize
+  if (bodyRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      recalcPreviewFromRatio();
+    });
+    resizeObserver.observe(bodyRef.value);
+  }
+  // Initialize ratio from current layout on first mount
+  await nextTick();
+  recalcPreviewFromRatio();
 
   window.addEventListener("zenypst:new-file", () => {
     templatePickerDialog.value = true;

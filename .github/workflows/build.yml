@@ -73,86 +73,126 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
-      - name: Update latest.json URLs
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ github.ref_name }}"
-          mkdir -p ./assets
-
-          # Download current latest.json
-          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "latest.json" --dir ./assets
-
-          # Update URLs to match actual asset names (remove version numbers from filenames in URLs)
-          python3 << 'EOF'
-          import json
-          import re
-          from urllib.parse import urlparse, urlunparse
-
-          with open('./assets/latest.json', 'r') as f:
-              data = json.load(f)
-
-          for platform, info in data.get('platforms', {}).items():
-              url = info.get('url', '')
-              parsed = urlparse(url)
-              path = parsed.path
-              filename = path.split('/')[-1]
-
-              # Remove version patterns from filename only
-              # Pattern: _X.Y.Z or _X.Y.Z_N (e.g., Zenypst_0.3.3_amd64.AppImage -> Zenypst_amd64.AppImage)
-              new_filename = re.sub(r'_[0-9]+\.[0-9]+\.[0-9]+(_[0-9]+)?', '', filename)
-              # Pattern: -X.Y.Z-N (for RPM, e.g., Zenypst-0.3.3-1.x86_64.rpm -> Zenypst.x86_64.rpm)
-              new_filename = re.sub(r'-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+', '', new_filename)
-
-              # Reconstruct path
-              new_path = '/'.join(path.split('/')[:-1] + [new_filename])
-              parsed = parsed._replace(path=new_path)
-              info['url'] = urlunparse(parsed)
-
-          with open('./assets/latest.json', 'w') as f:
-              json.dump(data, f, indent=2)
-          EOF
-
-          # Re-upload latest.json
-          gh release upload "$TAG" "./assets/latest.json" --repo "${{ github.repository }}" --clobber
-
-          rm -rf ./assets
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for changelog generation
 
       - name: Generate release notes and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           TAG="${{ github.ref_name }}"
 
-          # Extract changes from annotated tag message
-          TAG_CHANGES=$(git tag -l --format='%(contents)' "$TAG" | sed -n '/^Changes:/,$p' | tail -n +2)
+          # Find previous tag for commit range
+          PREV_TAG=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || echo "")
 
-          if [ -n "$TAG_CHANGES" ]; then
-            CHANGELOG=$(printf '## Changes\n%s\n\n' "$TAG_CHANGES")
-          else
-            CHANGELOG=""
+          # Generate categorized changelog from commits since previous tag
+          CHANGELOG=""
+          if [ -n "$PREV_TAG" ]; then
+            CHANGELOG=$'## Changes\n\n'
+
+            # Features (conventional commit: feat: / feat(...): )
+            FEATURES=$(git log --pretty=format:"- %s" "$PREV_TAG..$TAG" --no-merges --perl-regexp --grep="^feat[(:]" 2>/dev/null | sed 's/^feat[^:]*: //' || true)
+            if [ -n "$FEATURES" ]; then
+              CHANGELOG="${CHANGELOG}"$'### Features\n'"${FEATURES}"$'\n\n'
+            fi
+
+            # Bug fixes (conventional commit: fix: / fix(...): )
+            FIXES=$(git log --pretty=format:"- %s" "$PREV_TAG..$TAG" --no-merges --perl-regexp --grep="^fix[(:]" 2>/dev/null | sed 's/^fix[^:]*: //' || true)
+            if [ -n "$FIXES" ]; then
+              CHANGELOG="${CHANGELOG}"$'### Bug Fixes\n'"${FIXES}"$'\n\n'
+            fi
+
+            # Performance (perf:)
+            PERF=$(git log --pretty=format:"- %s" "$PREV_TAG..$TAG" --no-merges --perl-regexp --grep="^perf[(:]" 2>/dev/null | sed 's/^perf[^:]*: //' || true)
+            if [ -n "$PERF" ]; then
+              CHANGELOG="${CHANGELOG}"$'### Performance\n'"${PERF}"$'\n\n'
+            fi
+
+            # Refactoring (refactor:)
+            REFACTOR=$(git log --pretty=format:"- %s" "$PREV_TAG..$TAG" --no-merges --perl-regexp --grep="^refactor[(:]" 2>/dev/null | sed 's/^refactor[^:]*: //' || true)
+            if [ -n "$REFACTOR" ]; then
+              CHANGELOG="${CHANGELOG}"$'### Refactoring\n'"${REFACTOR}"$'\n\n'
+            fi
+
+            # Other non-merge commits that don't match above prefixes
+            OTHER=$(git log --pretty=format:"- %s" "$PREV_TAG..$TAG" --no-merges --perl-regexp --invert-grep --grep="^(feat|fix|perf|refactor)[(:]" 2>/dev/null || true)
+            if [ -n "$OTHER" ]; then
+              CHANGELOG="${CHANGELOG}"$'### Other Changes\n'"${OTHER}"$'\n\n'
+            fi
           fi
 
-          # Generate automatic release notes via GitHub API
+          # Generate GitHub auto notes for the comparison link ("Full Changelog: vX...vY")
           GENERATED_NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes -f tag_name="$TAG" --jq '.body')
+          COMPARISON_LINK=$(echo "$GENERATED_NOTES" | grep -F "**Full Changelog**:" || true)
 
-          DOWNLOAD_GUIDE="
-          ## Download Guide
+          # Fetch release assets and label them by platform
+          ASSETS_MD=$(python3 << 'PYEOF'
+import json, os, subprocess
 
-          | File | Platform | Description |
-          |------|----------|-------------|
-          | \`Zenypst_${TAG#v}_universal.dmg\` | **macOS** (Apple Silicon + Intel) | Disk image installer |
-          | \`Zenypst_${TAG#v}_universal.app.tar.gz\` | **macOS** (Apple Silicon + Intel) | App bundle (for Sparkle updater) |
-          | \`Zenypst_${TAG#v}_x64-setup.exe\` | **Windows** (64-bit) | NSIS installer |
-          | \`Zenypst_${TAG#v}_x64_en-US.msi\` | **Windows** (64-bit) | MSI installer |
-          | \`zenypst_${TAG#v}_amd64.deb\` | **Linux** (Debian/Ubuntu, 64-bit) | Debian package |
-          | \`zenypst_${TAG#v}_amd64.AppImage\` | **Linux** (64-bit) | Portable AppImage |
-          | \`zenypst-${TAG#v}-1.x86_64.rpm\` | **Linux** (RHEL/Fedora/openSUSE, 64-bit) | RPM package |
-          "
+tag = os.environ["TAG"]
+repo = os.environ["REPO"]
 
-          FULL_BODY="${CHANGELOG}${GENERATED_NOTES}
+# Fetch assets from the release
+result = subprocess.run(
+    ["gh", "release", "view", tag, "--repo", repo, "--json", "assets"],
+    capture_output=True, text=True
+)
+if result.returncode != 0:
+    print("")
+    exit(0)
+assets = json.loads(result.stdout).get("assets", [])
 
-          ${DOWNLOAD_GUIDE}"
+# Platform detection by file extension
+PLATFORM_MAP = {
+    ".dmg": "**macOS** (Universal)",
+    ".app.tar.gz": "**macOS** (Universal)",
+    "-setup.exe": "**Windows** (Installer)",
+    ".msi": "**Windows** (MSI)",
+    ".deb": "**Ubuntu / Debian**",
+    ".AppImage": "**Linux** (AppImage)",
+    ".rpm": "**Fedora / RHEL**",
+    ".sig": None,
+    "latest.json": None,
+}
+
+lines = []
+for a in assets:
+    name = a["name"]
+    label = None
+    for ext, lbl in PLATFORM_MAP.items():
+        if name.endswith(ext):
+            label = lbl
+            break
+    if label is None:
+        continue
+    lines.append(f"- {label}: `{name}`")
+
+# Sort: macOS first, then Windows, then Linux
+order = {"macOS": 0, "Windows": 1, "Ubuntu": 2, "Fedora": 3, "Linux": 4}
+def sort_key(line):
+    for platform, idx in order.items():
+        if platform in line:
+            return idx
+    return 9
+lines.sort(key=sort_key)
+
+if lines:
+    print("## Assets\n")
+    for l in lines:
+        print(l)
+PYEOF
+)
+
+          # Combine: changelog + comparison link + assets
+          FULL_BODY="${CHANGELOG}"
+          if [ -n "$COMPARISON_LINK" ]; then
+            FULL_BODY="${FULL_BODY}"$'\n'"${COMPARISON_LINK}"$'\n'
+          fi
+          if [ -n "$ASSETS_MD" ]; then
+            FULL_BODY="${FULL_BODY}"$'\n'"${ASSETS_MD}"
+          fi
 
           # Update release body
           gh release edit "$TAG" \
