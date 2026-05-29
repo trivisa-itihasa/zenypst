@@ -14,7 +14,6 @@ struct TextPos {
     x_pt: f64, // glyph center x in typst coordinates (pt, top-left origin)
     y_pt: f64, // baseline y
     line: u32, // 1-indexed source line
-    col: u32,  // 1-indexed source column
 }
 
 pub struct NativeCompilerState {
@@ -144,8 +143,8 @@ fn utf16_offset_to_byte(text: &str, utf16_offset: usize) -> usize {
     text.len()
 }
 
-/// Resolve a glyph's (span, utf16_offset_in_span) to exact (line, col) in source (1-indexed).
-fn resolve_glyph(span: typst::syntax::Span, utf16_offset: u16, world: &ZenypstWorld) -> Option<(u32, u32)> {
+/// Resolve a glyph's (span, utf16_offset_in_span) to the source line (1-indexed).
+fn resolve_glyph_line(span: typst::syntax::Span, utf16_offset: u16, world: &ZenypstWorld) -> Option<u32> {
     let id = span.id()?;
     let source = world.source(id).ok()?;
     let range = source.range(span)?;
@@ -155,8 +154,7 @@ fn resolve_glyph(span: typst::syntax::Span, utf16_offset: u16, world: &ZenypstWo
     let abs_byte = range.start + byte_in_span;
     let lines = source.lines();
     let line = lines.byte_to_line(abs_byte)? as u32 + 1;
-    let col = lines.byte_to_column(abs_byte)? as u32 + 1;
-    Some((line, col))
+    Some(line)
 }
 
 /// Recursively collect glyph positions from a frame.
@@ -184,8 +182,8 @@ fn collect_positions(
                     let advance_pt = glyph.x_advance.get() * size_pt;
                     let x_offset_pt = glyph.x_offset.get() * size_pt;
                     let cx = cursor_x + x_offset_pt + advance_pt * 0.5;
-                    if let Some((line, col)) = resolve_glyph(glyph.span.0, glyph.span.1, world) {
-                        out.push(TextPos { page, x_pt: cx, y_pt: cy, line, col });
+                    if let Some(line) = resolve_glyph_line(glyph.span.0, glyph.span.1, world) {
+                        out.push(TextPos { page, x_pt: cx, y_pt: cy, line });
                     }
                     cursor_x += advance_pt;
                 }
