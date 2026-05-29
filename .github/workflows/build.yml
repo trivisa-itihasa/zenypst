@@ -129,61 +129,61 @@ jobs:
 
           # Fetch release assets and label them by platform
           ASSETS_MD=$(python3 << 'PYEOF'
-import json, os, subprocess
-
-tag = os.environ["TAG"]
-repo = os.environ["REPO"]
-
-# Fetch assets from the release
-result = subprocess.run(
-    ["gh", "release", "view", tag, "--repo", repo, "--json", "assets"],
-    capture_output=True, text=True
-)
-if result.returncode != 0:
-    print("")
-    exit(0)
-assets = json.loads(result.stdout).get("assets", [])
-
-# Platform detection by file extension
-PLATFORM_MAP = {
-    ".dmg": "**macOS** (Universal)",
-    ".app.tar.gz": "**macOS** (Universal)",
-    "-setup.exe": "**Windows** (Installer)",
-    ".msi": "**Windows** (MSI)",
-    ".deb": "**Ubuntu / Debian**",
-    ".AppImage": "**Linux** (AppImage)",
-    ".rpm": "**Fedora / RHEL**",
-    ".sig": None,
-    "latest.json": None,
-}
-
-lines = []
-for a in assets:
-    name = a["name"]
-    label = None
-    for ext, lbl in PLATFORM_MAP.items():
-        if name.endswith(ext):
-            label = lbl
-            break
-    if label is None:
-        continue
-    lines.append(f"- {label}: `{name}`")
-
-# Sort: macOS first, then Windows, then Linux
-order = {"macOS": 0, "Windows": 1, "Ubuntu": 2, "Fedora": 3, "Linux": 4}
-def sort_key(line):
-    for platform, idx in order.items():
-        if platform in line:
-            return idx
-    return 9
-lines.sort(key=sort_key)
-
-if lines:
-    print("## Assets\n")
-    for l in lines:
-        print(l)
-PYEOF
-)
+          import json, os, subprocess
+          
+          tag = os.environ["TAG"]
+          repo = os.environ["REPO"]
+          
+          # Fetch assets from the release
+          result = subprocess.run(
+              ["gh", "release", "view", tag, "--repo", repo, "--json", "assets"],
+              capture_output=True, text=True
+          )
+          if result.returncode != 0:
+              print("")
+              exit(0)
+          assets = json.loads(result.stdout).get("assets", [])
+          
+          # Platform detection by file extension
+          PLATFORM_MAP = {
+              ".dmg": "**macOS** (Universal)",
+              ".app.tar.gz": "**macOS** (Universal)",
+              "-setup.exe": "**Windows** (Installer)",
+              ".msi": "**Windows** (MSI)",
+              ".deb": "**Ubuntu / Debian**",
+              ".AppImage": "**Linux** (AppImage)",
+              ".rpm": "**Fedora / RHEL**",
+              ".sig": None,
+              "latest.json": None,
+          }
+          
+          lines = []
+          for a in assets:
+              name = a["name"]
+              label = None
+              for ext, lbl in PLATFORM_MAP.items():
+                  if name.endswith(ext):
+                      label = lbl
+                      break
+              if label is None:
+                  continue
+              lines.append(f"- {label}: `{name}`")
+          
+          # Sort: macOS first, then Windows, then Linux
+          order = {"macOS": 0, "Windows": 1, "Ubuntu": 2, "Fedora": 3, "Linux": 4}
+          def sort_key(line):
+              for platform, idx in order.items():
+                  if platform in line:
+                      return idx
+              return 9
+          lines.sort(key=sort_key)
+          
+          if lines:
+              print("## Assets\n")
+              for l in lines:
+                  print(l)
+          PYEOF
+          )
 
           # Combine: changelog + comparison link + assets
           FULL_BODY="${CHANGELOG}"
