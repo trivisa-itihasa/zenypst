@@ -33,6 +33,62 @@ let renderedPages = new Set<number>();
 let renderingPages = new Set<number>();
 let lastGestureScale = 0;
 
+// Middle-button panning state
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let panStartScrollLeft = 0;
+let panStartScrollTop = 0;
+
+// Middle-button panning
+function onMouseDown(e: MouseEvent): void {
+  if (e.button !== 1) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  const container = pagesContainer.value;
+  if (!container) return;
+
+  isPanning = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  panStartScrollLeft = container.scrollLeft;
+  panStartScrollTop = container.scrollTop;
+
+  container.style.cursor = "grabbing";
+  container.style.userSelect = "none";
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+}
+
+function onMouseMove(e: MouseEvent): void {
+  if (!isPanning) return;
+
+  const container = pagesContainer.value;
+  if (!container) return;
+
+  const dx = panStartX - e.clientX;
+  const dy = panStartY - e.clientY;
+
+  container.scrollLeft = panStartScrollLeft + dx;
+  container.scrollTop = panStartScrollTop + dy;
+}
+
+function onMouseUp(_e: MouseEvent): void {
+  if (!isPanning) return;
+  isPanning = false;
+
+  const container = pagesContainer.value;
+  if (container) {
+    container.style.cursor = "";
+    container.style.userSelect = "";
+  }
+
+  document.removeEventListener("mousemove", onMouseMove);
+  document.removeEventListener("mouseup", onMouseUp);
+}
+
 // Ctrl+wheel zoom (supports trackpad pinch on macOS)
 function onWheel(e: WheelEvent): void {
   if (!e.ctrlKey && !e.metaKey) return;
@@ -75,6 +131,9 @@ function zoomOut(): void {
 onMounted(() => {
   const el = pagesContainer.value;
   if (!el) return;
+  // Capture phase for mousedown so we can cancel middle-click autoscroll
+  // before it reaches the text layer handlers.
+  el.addEventListener("mousedown", onMouseDown, true);
   el.addEventListener("wheel", onWheel, { passive: false });
   el.addEventListener("gesturestart", onGestureStart, { passive: false });
   el.addEventListener("gesturechange", onGestureChange, { passive: false });
@@ -84,11 +143,16 @@ onMounted(() => {
 onUnmounted(() => {
   const el = pagesContainer.value;
   if (el) {
+    el.removeEventListener("mousedown", onMouseDown, true);
     el.removeEventListener("wheel", onWheel);
     el.removeEventListener("gesturestart", onGestureStart);
     el.removeEventListener("gesturechange", onGestureChange);
     el.removeEventListener("gestureend", onGestureEnd);
   }
+  // Clean up any lingering document-level panning listeners
+  document.removeEventListener("mousemove", onMouseMove);
+  document.removeEventListener("mouseup", onMouseUp);
+  isPanning = false;
   observer?.disconnect();
   currentPdf?.destroy();
   currentPdf = null;
@@ -474,10 +538,11 @@ watch(smoothScale, (s) => {
 
 .pdf-pages {
   flex: 1 1 0;
-  overflow-y: auto;
+  overflow: auto;
   background: var(--zen-surface-variant);
   scrollbar-width: thin;
   scrollbar-color: var(--zen-border) transparent;
+  cursor: grab;
 }
 
 .pdf-pages::-webkit-scrollbar {
